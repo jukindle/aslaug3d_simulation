@@ -29,28 +29,28 @@ class AslaugEnv(gym.Env):
                 "init_states": [0.0, -0.75, 0.0, -1.75, 0.0, 2.5, np.pi/4],
                 "link_names": (['top_link', 'front_laser']
                                + ['panda_link{}'.format(i+1) for i in range(7)]
-                               + ['panda_hand']),
-                "vel_mag": 1.5,
-                "acc_mag": 1.5
+                               + ['grasp_loc']),
+                "vel_mag": 1.0,
+                "acc_mag": 0.75
             },
             "base": {
-                "vel_mag": np.array([0.6, 0.6, 1.2]),
-                "acc_mag": np.array([3.0, 3.0, 1.0])
+                "vel_mag": np.array([0.4, 0.4, 0.75]),
+                "acc_mag": np.array([1.5, 1.5, 0.5])
             },
             "setpoint": {
                 "hold_time": 2.0,
-                "tol_lin_mag": 0.15,
-                "tol_ang_mag": np.pi/4
+                "tol_lin_mag": 0.2,
+                "tol_ang_mag": np.pi
             },
             "reward": {
                 "fac_goal_dis_lin": 10.0,
-                "fac_goal_dis_ang": 10.0,
+                "fac_goal_dis_ang": 0.0,
                 "fac_ang_vel": -2.0,
                 "fac_sp_hold": 3.0,
                 "rew_timeout": -5.0,
-                "rew_joint_limits": -5.0,
-                "rew_collision": -15.0,
-                "rew_goal_reached": 25.0
+                "rew_joint_limits": -20.0,
+                "rew_collision": -25.0,
+                "rew_goal_reached": 35.0
             },
             "world": {
                 "tau": 0.02,
@@ -103,7 +103,8 @@ class AslaugEnv(gym.Env):
         high_mb = np.array(self.p["base"]["vel_mag"])
         low_mb = -high_mb
         # TODO: add proper scaling
-        high_lp = np.array((self.n_joints+1)*[1.5, 1.5, 1.5, np.pi, np.pi, np.pi])
+        high_lp = np.array((self.n_joints+1)*[1.5, 1.5, 1.5,
+                                              np.pi, np.pi, np.pi])
         low_lp = -high_lp
         high_j_p = self.joint_limits[:, 1]
         low_j_p = self.joint_limits[:, 0]
@@ -179,6 +180,10 @@ class AslaugEnv(gym.Env):
         mb_ang_vel = self.get_base_vels()[2]
         reward += np.abs(mb_ang_vel)*self.tau*self.p["reward"]["fac_ang_vel"]
 
+        # Penalize velocity of joints
+        j_vel_mag = np.array([self.p["joints"]["vel_mag"]]*self.n_joints)
+        j_pos, j_vel = self.get_joint_states()
+        reward -= 1.1*self.tau*(np.abs(j_vel)/j_vel_mag).sum()
         # Calculate goal distance
         eucl_dis, eucl_ang = self.calculate_goal_distance()
 
@@ -247,7 +252,7 @@ class AslaugEnv(gym.Env):
             possible_sp_pos += self.move_bookcase(bookcaseId, pos)
             pos[0] += 1.1 + self.np_random.uniform(0, 0.2)
 
-        pos = np.array([1.0, self.p["world"]["corridor_width"]/2, np.pi/2])
+        pos = np.array([1.0, self.p["world"]["corridor_width"]/2, -np.pi/2])
         for i in range(int(len(self.bookcaseIds)/2.0), len(self.bookcaseIds)):
             bookcaseId = self.bookcaseIds[i]
             possible_sp_pos += self.move_bookcase(bookcaseId, pos)
@@ -296,10 +301,19 @@ class AslaugEnv(gym.Env):
         mug_pos = [5, 2, 0.0]
         mug_ori = pb.getQuaternionFromEuler([0, 0, 0])
         dirname = os.path.dirname(__file__)
-        model_path = os.path.join(dirname, '../urdf/beer_rothaus/beer_rothaus.urdf')
+        model_path = os.path.join(dirname,
+                                  '../urdf/beer_rothaus/beer_rothaus.urdf')
         self.spId = pb.loadURDF(model_path, mug_pos, mug_ori,
                                 useFixedBase=True,
                                 physicsClientId=self.clientId)
+
+        # Spawn setpoint marker
+        mug_pos = [5, 3, 0.0]
+        mug_ori = pb.getQuaternionFromEuler([0, 0, 0])
+        self.markerId = pb.loadURDF("sphere2red.urdf", mug_pos, mug_ori,
+                                    globalScaling=0.2, useFixedBase=True,
+                                    physicsClientId=self.clientId)
+
 
         # Figure out joint mapping: self.joint_mapping maps as in
         # desired_mapping list.
@@ -321,6 +335,15 @@ class AslaugEnv(gym.Env):
                 self.joint_limits[map_idx, :] = info[8:10]
             if link_name in link_names:
                 self.link_mapping[link_names.index(link_name)] = idx
+
+        for j in range(pb.getNumJoints(self.spId,
+                                       physicsClientId=self.clientId)):
+            info = pb.getJointInfo(self.spId, j,
+                                   physicsClientId=self.clientId)
+            link_name = info[12].decode("utf-8")
+            idx = info[0]
+            if link_name == "grasp_loc":
+                self.spGraspLinkId = idx
 
         # Prepare lidar
         n_scans = self.p["sensors"]["lidar"]["n_scans"]
@@ -352,9 +375,9 @@ class AslaugEnv(gym.Env):
         ee_pos_w, ee_ori_w = state_ee[4:6]
         w_pos_ee, w_ori_ee = pb.invertTransform(ee_pos_w, ee_ori_w,
                                                 self.clientId)
-        sp_pos_w, sp_ori_w = pb.getBasePositionAndOrientation(self.spId,
-                                                              self.clientId)
-
+        state_sp = pb.getLinkState(self.spId, self.spGraspLinkId,
+                                   False, False, self.clientId)
+        sp_pos_w, sp_ori_w = state_sp[4:6]
         sp_pos_ee, sp_ori_ee = pb.multiplyTransforms(w_pos_ee, w_ori_ee,
                                                      sp_pos_w, sp_ori_w,
                                                      self.clientId)
@@ -402,14 +425,15 @@ class AslaugEnv(gym.Env):
     def get_lidar_scan(self):
         # Get pose of lidar
         states = pb.getLinkState(self.robotId, self.link_mapping[1],
-                                  False, False, self.clientId)
+                                 False, False, self.clientId)
         lidar_pos, lidar_ori = states[4:6]
         lidar_pos = np.array(lidar_pos)
         R = np.array(pb.getMatrixFromQuaternion(lidar_ori))
         R = np.reshape(R, (3, 3))
         scan_l = R.dot(self.rays[0]).T + lidar_pos
         scan_h = R.dot(self.rays[1]).T + lidar_pos
-        scan_r = pb.rayTestBatch(scan_l.tolist(), scan_h.tolist(), self.clientId)
+        scan_r = pb.rayTestBatch(scan_l.tolist(), scan_h.tolist(),
+                                 self.clientId)
 
         scan = [x[2]*self.p["sensors"]["lidar"]["range"] for x in scan_r]
         return scan
@@ -441,7 +465,8 @@ class AslaugEnv(gym.Env):
         return min_reached or max_reached
 
     def check_collision(self):
-        return len(pb.getContactPoints(self.robotId, self.clientId)) > 0
+        return len(pb.getContactPoints(bodyA=self.robotId,
+                                       physicsClientId=self.clientId)) > 0
 
     def calculate_goal_distance(self):
         sp_pose_ee = self.get_ee_sp_transform()
@@ -475,14 +500,14 @@ class AslaugEnv(gym.Env):
         # Calculate possible setpoint positions
         sp_pos = []
         Rt = self.rotation_matrix(pose2d[2]).T
-        sp_pos.append(np.array(pos) + Rt.dot(np.array([0.0, 0.18, 1.1])))
-        sp_pos.append(np.array(pos) + Rt.dot(np.array([0.0, -0.18, 1.1])))
-        sp_pos.append(np.array(pos) + Rt.dot(np.array([0.0, 0.18, 0.75])))
-        sp_pos.append(np.array(pos) + Rt.dot(np.array([0.0, -0.18, 0.75])))
-        sp_pos.append(np.array(pos) + Rt.dot(np.array([0.0, 0.18, 0.4])))
-        sp_pos.append(np.array(pos) + Rt.dot(np.array([0.0, -0.18, 0.4])))
-        sp_pos.append(np.array(pos) + Rt.dot(np.array([0.0, 0.18, 0.05])))
-        sp_pos.append(np.array(pos) + Rt.dot(np.array([0.0, -0.18, 0.05])))
+        sp_pos.append(np.array(pos) + Rt.dot(np.array([-0.15, 0.18, 1.1])))
+        sp_pos.append(np.array(pos) + Rt.dot(np.array([-0.15, -0.18, 1.1])))
+        sp_pos.append(np.array(pos) + Rt.dot(np.array([-0.15, 0.18, 0.75])))
+        sp_pos.append(np.array(pos) + Rt.dot(np.array([-0.15, -0.18, 0.75])))
+        sp_pos.append(np.array(pos) + Rt.dot(np.array([-0.15, 0.18, 0.4])))
+        sp_pos.append(np.array(pos) + Rt.dot(np.array([-0.15, -0.18, 0.4])))
+        sp_pos.append(np.array(pos) + Rt.dot(np.array([-0.15, 0.18, 0.05])))
+        sp_pos.append(np.array(pos) + Rt.dot(np.array([-0.15, -0.18, 0.05])))
 
         return sp_pos
 
@@ -492,4 +517,7 @@ class AslaugEnv(gym.Env):
     def move_sp(self, pos):
         ori_quat = pb.getQuaternionFromEuler([0, 0, 0])
         pb.resetBasePositionAndOrientation(self.spId, pos, ori_quat,
+                                           self.clientId)
+        pos[2] = 1.6
+        pb.resetBasePositionAndOrientation(self.markerId, pos, ori_quat,
                                            self.clientId)
