@@ -29,14 +29,15 @@ class EnvRunner:
 
     def load_env(self):
         # Load module
-        aslaug2d_mod = import_module("data.saved_models.{}.{}".format(folder,
-                                                                 self.model_name))
+        #mod_path = "data.saved_models.{}.{}".format(folder, self.model_name)
+        mod_path = "envs.{}".format(self.model_name)
+        aslaug2d_mod = import_module(mod_path)
 
         # Load env
         env = aslaug2d_mod.AslaugEnv(folder_name=self.folder, gui=True)
         if self.record_video:
             vid_n = "data/recordings/{}/{}".format(self.model_name,
-                                                self.record_video)
+                                                   self.record_video)
             env = gym.wrappers.Monitor(env, vid_n,
                                        video_callable=lambda episode_id: True,
                                        force=True)
@@ -78,17 +79,27 @@ class EnvRunner:
         return self.obs
 
     def step(self, print_status=True):
-        self.action, _ = self.model.predict(self.obs, deterministic=self.deterministic)
+        self.action, _ = self.model.predict(self.obs,
+                                            deterministic=self.deterministic)
 
         self.obs, self.reward, self.done, _ = self.env.step(self.action)
         self.cum_reward += self.reward
         if print_status:
+            obs = self.obs
+            if hasattr(self.env, "obs_slicing"):
+                sl = self.env.obs_slicing
+                obs = ("Setpoint:\n{}\nMBvel:\n{}\nLinkpos:\n{}\n" +
+                       "Jointpos:\n{}\Jointvel:\n{}\nScan:\n{}\n"
+                       ).format(obs[sl[0]:sl[1]], obs[sl[1]:sl[2]],
+                                obs[sl[2]:sl[3]], obs[sl[3]:sl[4]],
+                                obs[sl[4]:sl[5]], obs[sl[5]:sl[6]])
             print("===============================\n",
-                  "Observations\n{}\n\n".format(self.obs),
+                  "Observations\n{}\n\n".format(obs),
                   "Actions\n{}\n".format(self.action),
                   "Reward\n{}\n".format(self.reward),
                   "Cum. reward\n{}\n".format(self.cum_reward),
                   "===============================\n\n\n")
+
     def render(self):
         self.env.render()
 
@@ -110,10 +121,12 @@ class EnvComparer:
     def create_envs(self):
         self.env1 = EnvRunner(self.version, episode=self.episode,
                               folder=self.folder_1,
-                              record_video=self.record_video, deterministic=self.deterministic)
+                              record_video=self.record_video,
+                              deterministic=self.deterministic)
         self.env2 = EnvRunner(self.version, episode=self.episode,
                               folder=self.folder_2,
-                              record_video=self.record_video, deterministic=self.deterministic)
+                              record_video=self.record_video,
+                              deterministic=self.deterministic)
 
     def run_n_episodes(self, n_episodes=1):
         for episode in range(n_episodes):
@@ -188,13 +201,16 @@ n_episodes = int(args.n_episodes)
 if version is None:
     print("Please specify a version. Example: -v v8")
 
-if args.copy_from_remote is not None:
-    os.system("scp -r mapcompute:~/aslaug2d/saved_models/{} saved_models".format(folder))
+if args.copy_from_remote in ['1', 'True', 'true']:
+
+    os.system("rsync -rav -e ssh mapcompute:~/aslaug3d_simulation/data/saved_models/{} data/saved_models".format(folder))
+    #os.system("scp -r mapcompute:~/aslaug3d_simulation/data/saved_models/{} data/saved_models".format(folder))
 
 deterministic = True if args.deterministic in ["True", "true", "1"] else False
 
 if folder_2:
-    er = EnvComparer(version, folder, folder_2, ep, record_video, deterministic)
+    er = EnvComparer(version, folder, folder_2, ep,
+                     record_video, deterministic)
 else:
     er = EnvRunner(version, ep, folder, record_video, deterministic)
 
