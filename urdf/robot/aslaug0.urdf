@@ -24,7 +24,7 @@
     <color rgba="0.15 0.15 0.15 1.0"/>
   </material>
   <gazebo>
-    <plugin filename="libaslaug_simple_movement.so" name="aslaug_simple_movement">
+    <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libaslaug_simple_movement.so" name="aslaug_simple_movement">
       <commandTopic>cmd_vel</commandTopic>
       <odometryTopic>odom</odometryTopic>
       <odometryFrame>odom</odometryFrame>
@@ -36,69 +36,69 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="meshes/body.stl"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/body.stl"/>
       </geometry>
       <material name="black"/>
     </visual>
     <visual>
       <origin rpy="0 0 3.141592" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="meshes/side-cover.stl"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/side-cover.stl"/>
       </geometry>
       <material name="yellow"/>
     </visual>
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="meshes/side-cover.stl"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/side-cover.stl"/>
       </geometry>
       <material name="yellow"/>
     </visual>
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="meshes/end-cover.stl"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/end-cover.stl"/>
       </geometry>
       <material name="black"/>
     </visual>
     <visual>
       <origin rpy="0 0 3.141592" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="meshes/end-cover.stl"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/end-cover.stl"/>
       </geometry>
       <material name="black"/>
     </visual>
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="meshes/lights.stl"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/lights.stl"/>
       </geometry>
       <material name="white"/>
     </visual>
     <visual>
       <origin rpy="0 0 3.141592" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="meshes/lights.stl"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/lights.stl"/>
       </geometry>
       <material name="red"/>
     </visual>
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="meshes/top.stl"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/top.stl"/>
       </geometry>
       <material name="black"/>
     </visual>
     <collision>
       <origin xyz="0 0 0"/>
       <geometry>
-        <mesh filename="meshes/body-collision.stl"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/body-collision.stl"/>
       </geometry>
     </collision>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="meshes/top.stl"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/top.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -116,7 +116,7 @@
 
     </link>
   <!-- </xacro:macro> -->
-  <!-- <xacro:include filename="$(find aslaug)/robots/panda/panda.transmission.xacro"/> -->
+  <!-- <xacro:include filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/$(find aslaug)/robots/panda/panda.transmission.xacro"/> -->
   <!-- end for simulation -->
   <!-- Chassis collision -->
   <gazebo reference="base_link">
@@ -135,7 +135,7 @@
         <collision>base_link_fixed_joint_lump__panda_link0_collision_2</collision> -->
         <topic>/collisions/chassis</topic>
       </contact>
-      <plugin filename="libgazebo_ros_bumper.so" name="gazebo_ros_base_link_contact_plugin">
+      <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libgazebo_ros_bumper.so" name="gazebo_ros_base_link_contact_plugin">
         <alwaysOn>true</alwaysOn>
         <updateRate>50.0</updateRate>
         <bumperTopicName>/collisions/chassis</bumperTopicName>
@@ -152,7 +152,7 @@
         <collision>panda_link1_collision</collision>
         <topic>/collisions/panda/arm</topic>
       </contact>
-      <plugin filename="libgazebo_ros_bumper.so" name="gazebo_ros_panda_link1_contact_plugin">
+      <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libgazebo_ros_bumper.so" name="gazebo_ros_panda_link1_contact_plugin">
         <alwaysOn>true</alwaysOn>
         <updateRate>50.0</updateRate>
         <bumperTopicName>/collisions/panda/arm</bumperTopicName>
@@ -169,7 +169,7 @@
         <collision>panda_link2_collision</collision>
         <topic>/collisions/panda/arm</topic>
       </contact>
-      <plugin filename="libgazebo_ros_bumper.so" name="gazebo_ros_panda_link2_contact_plugin">
+      <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libgazebo_ros_bumper.so" name="gazebo_ros_panda_link2_contact_plugin">
         <alwaysOn>true</alwaysOn>
         <updateRate>50.0</updateRate>
         <bumperTopicName>/collisions/panda/arm</bumperTopicName>
@@ -186,7 +186,7 @@
         <collision>panda_link3_collision</collision>
         <topic>/collisions/panda/arm</topic>
       </contact>
-      <plugin filename="libgazebo_ros_bumper.so" name="gazebo_ros_panda_link3_contact_plugin">
+      <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libgazebo_ros_bumper.so" name="gazebo_ros_panda_link3_contact_plugin">
         <alwaysOn>true</alwaysOn>
         <updateRate>50.0</updateRate>
         <bumperTopicName>/collisions/panda/arm</bumperTopicName>
@@ -203,7 +203,7 @@
         <collision>panda_link4_collision</collision>
         <topic>/collisions/panda/arm</topic>
       </contact>
-      <plugin filename="libgazebo_ros_bumper.so" name="gazebo_ros_panda_link4_contact_plugin">
+      <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libgazebo_ros_bumper.so" name="gazebo_ros_panda_link4_contact_plugin">
         <alwaysOn>true</alwaysOn>
         <updateRate>50.0</updateRate>
         <bumperTopicName>/collisions/panda/arm</bumperTopicName>
@@ -220,7 +220,7 @@
         <collision>panda_link5_collision</collision>
         <topic>/collisions/panda/arm</topic>
       </contact>
-      <plugin filename="libgazebo_ros_bumper.so" name="gazebo_ros_panda_link5_contact_plugin">
+      <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libgazebo_ros_bumper.so" name="gazebo_ros_panda_link5_contact_plugin">
         <alwaysOn>true</alwaysOn>
         <updateRate>50.0</updateRate>
         <bumperTopicName>/collisions/panda/arm</bumperTopicName>
@@ -237,7 +237,7 @@
         <collision>panda_link6_collision</collision>
         <topic>/collisions/panda/arm</topic>
       </contact>
-      <plugin filename="libgazebo_ros_bumper.so" name="gazebo_ros_panda_link6_contact_plugin">
+      <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libgazebo_ros_bumper.so" name="gazebo_ros_panda_link6_contact_plugin">
         <alwaysOn>true</alwaysOn>
         <updateRate>50.0</updateRate>
         <bumperTopicName>/collisions/panda/arm</bumperTopicName>
@@ -258,7 +258,7 @@
         <collision>panda_link7_fixed_joint_lump__kinect_kinect_rgb_link_collision_4</collision>
         <topic>/collisions/panda/hand</topic>
       </contact>
-      <plugin filename="libgazebo_ros_bumper.so" name="gazebo_ros_panda_link7_contact_plugin">
+      <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libgazebo_ros_bumper.so" name="gazebo_ros_panda_link7_contact_plugin">
         <alwaysOn>true</alwaysOn>
         <updateRate>50.0</updateRate>
         <bumperTopicName>/collisions/panda/hand</bumperTopicName>
@@ -275,7 +275,7 @@
         <collision>panda_leftfinger_collision</collision>
         <topic>/collisions/panda/hand</topic>
       </contact>
-      <plugin filename="libgazebo_ros_bumper.so" name="gazebo_ros_panda_leftfinger_contact_plugin">
+      <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libgazebo_ros_bumper.so" name="gazebo_ros_panda_leftfinger_contact_plugin">
         <alwaysOn>true</alwaysOn>
         <updateRate>50.0</updateRate>
         <bumperTopicName>/collisions/panda/hand</bumperTopicName>
@@ -292,7 +292,7 @@
         <collision>panda_rightfinger_collision</collision>
         <topic>/collisions/panda/hand</topic>
       </contact>
-      <plugin filename="libgazebo_ros_bumper.so" name="gazebo_ros_panda_rightfinger_contact_plugin">
+      <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libgazebo_ros_bumper.so" name="gazebo_ros_panda_rightfinger_contact_plugin">
         <alwaysOn>true</alwaysOn>
         <updateRate>50.0</updateRate>
         <bumperTopicName>/collisions/panda/hand</bumperTopicName>
@@ -315,7 +315,7 @@
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
         <!-- Origin of this mesh is the focal point of the LIDAR. -->
-        <mesh filename="meshes/ust-10lx.stl"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/ust-10lx.stl"/>
       </geometry>
       <material name="dark_grey"/>
     </visual>
@@ -352,7 +352,7 @@
           <stddev>0.001</stddev>
         </noise>
       </ray>
-      <plugin filename="libgazebo_ros_laser.so" name="gazebo_ros_laser">
+      <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libgazebo_ros_laser.so" name="gazebo_ros_laser">
         <topicName>front/scan</topicName>
         <frameName>front_laser</frameName>
         <hokuyoMinIntensity>101</hokuyoMinIntensity>
@@ -361,7 +361,7 @@
     <material>Gazebo/DarkGrey</material>
   </gazebo>
   <gazebo>
-    <plugin filename="libgazebo_ros_p3d.so" name="robot_groundtruth_sim">
+    <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libgazebo_ros_p3d.so" name="robot_groundtruth_sim">
       <alwaysOn>true</alwaysOn>
       <updateRate>100.0</updateRate>
       <bodyName>base_link</bodyName>
@@ -381,12 +381,12 @@
   <link name="panda_link0">
     <visual>
       <geometry>
-        <mesh filename="meshes/visual/link0.dae"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/visual/link0.dae"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="meshes/collision/link0.stl"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/collision/link0.stl"/>
       </geometry>
     </collision>
     <!-- for simulation -->
@@ -400,12 +400,12 @@
   <link name="panda_link1">
     <visual>
       <geometry>
-        <mesh filename="meshes/visual/link1.dae"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/visual/link1.dae"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="meshes/collision/link1.stl"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/collision/link1.stl"/>
       </geometry>
     </collision>
     <!-- for simulation -->
@@ -430,12 +430,12 @@
   <link name="panda_link2">
     <visual>
       <geometry>
-        <mesh filename="meshes/visual/link2.dae"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/visual/link2.dae"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="meshes/collision/link2.stl"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/collision/link2.stl"/>
       </geometry>
     </collision>
     <!-- for simulation -->
@@ -460,12 +460,12 @@
   <link name="panda_link3">
     <visual>
       <geometry>
-        <mesh filename="meshes/visual/link3.dae"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/visual/link3.dae"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="meshes/collision/link3.stl"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/collision/link3.stl"/>
       </geometry>
     </collision>
     <!-- for simulation -->
@@ -490,12 +490,12 @@
   <link name="panda_link4">
     <visual>
       <geometry>
-        <mesh filename="meshes/visual/link4.dae"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/visual/link4.dae"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="meshes/collision/link4.stl"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/collision/link4.stl"/>
       </geometry>
     </collision>
     <!-- for simulation -->
@@ -520,12 +520,12 @@
   <link name="panda_link5">
     <visual>
       <geometry>
-        <mesh filename="meshes/visual/link5.dae"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/visual/link5.dae"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="meshes/collision/link5.stl"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/collision/link5.stl"/>
       </geometry>
     </collision>
     <!-- for simulation -->
@@ -550,12 +550,12 @@
   <link name="panda_link6">
     <visual>
       <geometry>
-        <mesh filename="meshes/visual/link6.dae"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/visual/link6.dae"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="meshes/collision/link6.stl"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/collision/link6.stl"/>
       </geometry>
     </collision>
     <!-- for simulation -->
@@ -580,12 +580,12 @@
   <link name="panda_link7">
     <visual>
       <geometry>
-        <mesh filename="meshes/visual/link7.dae"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/visual/link7.dae"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="meshes/collision/link7.stl"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/collision/link7.stl"/>
       </geometry>
     </collision>
     <!-- for simulation -->
@@ -630,12 +630,12 @@
   <link name="panda_hand">
     <visual>
       <geometry>
-        <mesh filename="meshes/visual/hand.dae"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/visual/hand.dae"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="meshes/collision/hand.stl"/>
+        <mesh filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/meshes/collision/hand.stl"/>
       </geometry>
     </collision>
     <!-- for simulation -->
@@ -687,7 +687,7 @@
           <stddev>0.007</stddev>
         </noise>
       </camera>
-      <plugin filename="libgazebo_ros_openni_kinect.so" name="kinect_kinect_ir_link_controller">
+      <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libgazebo_ros_openni_kinect.so" name="kinect_kinect_ir_link_controller">
         <alwaysOn>true</alwaysOn>
         <updateRate>0.0</updateRate>
         <cameraName>kinect_depth</cameraName>
@@ -799,39 +799,39 @@
   <!-- <xacro:panda_transmission robot_name="$(arg robot_name)" load_hand="true" /> -->
   <!-- end for simulation -->
   <!-- Turn off gravity for panda -->
-  <!-- <xacro:include filename="$(find aslaug)/robots/accessoires/turn_off_gravity.gazebo.xacro"/> -->
+  <!-- <xacro:include filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/$(find aslaug)/robots/accessoires/turn_off_gravity.gazebo.xacro"/> -->
   <gazebo>
-    <plugin filename="libgazebo_ros_joint_state_publisher.so" name="gazbo_ros_joint_state_panda_link1">
+    <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libgazebo_ros_joint_state_publisher.so" name="gazbo_ros_joint_state_panda_link1">
       <jointName>panda_joint1</jointName>
       <robotNamespace>/</robotNamespace>
       <updateRate>50.0</updateRate>
     </plugin>
-    <plugin filename="libgazebo_ros_joint_state_publisher.so" name="gazbo_ros_joint_state_panda_link2">
+    <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libgazebo_ros_joint_state_publisher.so" name="gazbo_ros_joint_state_panda_link2">
       <jointName>panda_joint2</jointName>
       <robotNamespace>/</robotNamespace>
       <updateRate>50.0</updateRate>
     </plugin>
-    <plugin filename="libgazebo_ros_joint_state_publisher.so" name="gazbo_ros_joint_state_panda_link3">
+    <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libgazebo_ros_joint_state_publisher.so" name="gazbo_ros_joint_state_panda_link3">
       <jointName>panda_joint3</jointName>
       <robotNamespace>/</robotNamespace>
       <updateRate>50.0</updateRate>
     </plugin>
-    <plugin filename="libgazebo_ros_joint_state_publisher.so" name="gazbo_ros_joint_state_panda_link4">
+    <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libgazebo_ros_joint_state_publisher.so" name="gazbo_ros_joint_state_panda_link4">
       <jointName>panda_joint4</jointName>
       <robotNamespace>/</robotNamespace>
       <updateRate>50.0</updateRate>
     </plugin>
-    <plugin filename="libgazebo_ros_joint_state_publisher.so" name="gazbo_ros_joint_state_panda_link5">
+    <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libgazebo_ros_joint_state_publisher.so" name="gazbo_ros_joint_state_panda_link5">
       <jointName>panda_joint5</jointName>
       <robotNamespace>/</robotNamespace>
       <updateRate>50.0</updateRate>
     </plugin>
-    <plugin filename="libgazebo_ros_joint_state_publisher.so" name="gazbo_ros_joint_state_panda_link6">
+    <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libgazebo_ros_joint_state_publisher.so" name="gazbo_ros_joint_state_panda_link6">
       <jointName>panda_joint6</jointName>
       <robotNamespace>/</robotNamespace>
       <updateRate>50.0</updateRate>
     </plugin>
-    <plugin filename="libgazebo_ros_joint_state_publisher.so" name="gazbo_ros_joint_state_panda_link7">
+    <plugin filename="package://aslaug/../../../../aslaug3d_simulation/urdf/robot/libgazebo_ros_joint_state_publisher.so" name="gazbo_ros_joint_state_panda_link7">
       <jointName>panda_joint7</jointName>
       <robotNamespace>/</robotNamespace>
       <updateRate>50.0</updateRate>

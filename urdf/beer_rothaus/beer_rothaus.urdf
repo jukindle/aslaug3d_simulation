@@ -20,6 +20,24 @@
   </collision>
   </link>
 
+
+  <link name="grasp_loc">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0.125"/>
+      <geometry>
+        <sphere radius="0.05"/>
+      </geometry>
+    </visual>
+
+  </link>
+  <joint name="grasp_loc_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+
+    <parent link="base_link"/>
+    <child link="grasp_loc"/>
+  </joint>
+
+
 <gazebo>
 	<static>true</static>
 </gazebo>
