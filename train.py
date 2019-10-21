@@ -1,7 +1,6 @@
 from stable_baselines.common.vec_env import SubprocVecEnv
 from stable_baselines import PPO2
 from millify import millify
-import gym
 import numpy as np
 
 from importlib import import_module
@@ -49,8 +48,8 @@ policy = getattr(policy_mod, policy_name)
 # Prepare directory and rename terminal
 if folder_name == "None":
     folder_name = model_name
-os.system("printf '\e]0;{}\7\n'".format(folder_name))
-
+#os.system("printf '\e]0;{}\7\n'".format(folder_name))
+os.system("tmux rename-session {}-{}".format(version, folder_name))
 
 dir_path = "data/saved_models/{}/".format(folder_name)
 if not os.path.exists(dir_path):
@@ -101,12 +100,15 @@ if cl is not None:
     for cl_entry in cl_list:
         env.set_attr(cl_entry["param"], cl_entry["start"])
 
-learning_params = {"n_steps": 1024, "nminibatches": 8,  "lam": 0.95,
-                   "gamma": 0.9, "noptepochs": 4, "ent_coef": .00001,
-                   "learning_rate": [2.5e-3, 0.01e-4, 0.9, 0.1],
-                   "cliprange": [0.3, 0.1, 0.9, 0.35],
+learning_params = {"n_steps": 128, "nminibatches": 8,  "lam": 0.95,
+                   "gamma": 0.99, "noptepochs": 4, "ent_coef": .0001,
+                   "learning_rate": [1.5e-3, 0.01e-4, 0.75, 0.25],
+                   "cliprange": [0.3, 0.1, 0.75, 0.25],
                    "cliprange_vf": -1}
 
+learning_params = {"nminibatches": 8, "n_steps": 2048, "gamma": 0.99, "learning_rate": 0.0007974227066470103, "ent_coef": 0.003760312514286235, "cliprange": 0.2, "noptepochs": 30, "lam": 0.8, "cliprange_vf": -1}
+# learning_params = {"nminibatches": 8, "n_steps": 4096, "gamma": 0.99, "learning_rate": 0.0007974227066470103, "ent_coef": 0.003760312514286235, "cliprange": 0.2, "noptepochs": 30, "lam": 0.8, "cliprange_vf": -1}
+# learning_params = {"nminibatches": 8, "n_steps": 2048, "gamma": 0.995, "learning_rate": 0.0007402485624080338, "ent_coef": 0.007557145949674611, "cliprange": 0.1, "noptepochs": 20, "lam": 0.92, "cliprange_vf": -1}
 # Save learning params to file
 params_file = "data/saved_models/{}/learning_params.json".format(folder_name)
 with open(params_file, 'w') as outfile:
@@ -123,11 +125,12 @@ if type(learning_params["cliprange"]) in [list, tuple]:
     learning_params["cliprange"] = create_custom_lr(*lr_params)
 
 
+g_env = create_gym()
+obs_slicing = g_env.obs_slicing if hasattr(g_env, "obs_slicing") else None
 model = PPO2(policy, env, verbose=0,
              tensorboard_log="data/tb_logs/{}".format(folder_name),
+             policy_kwargs={"obs_slicing": obs_slicing},
              **learning_params)
-
-
 
 
 # Prepare callback
@@ -167,6 +170,7 @@ def callback(_locals, _globals):
     if n_steps / 5000.0 >= info_idx:
         info_idx += 1
         print("Current frame_rate: {} fps.".format(_locals["fps"]))
+
 
 # Start learning
 model.learn(total_timesteps=int(steps), callback=callback)
