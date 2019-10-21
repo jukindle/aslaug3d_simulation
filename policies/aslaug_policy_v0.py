@@ -19,16 +19,20 @@ class AslaugPolicy(ActorCriticPolicy):
             shifted = tf.math.subtract(self.processed_obs, obs_avg)
             proc_obs = tf.math.divide(shifted, obs_dif)
 
+        if "obs_slicing" in kwargs and kwargs["obs_slicing"] is not None:
+            obs_slicing = kwargs["obs_slicing"]
+        else:
+            obs_slicing = [0, 6, 9, 57, 64, 71, 112]
         # Create network
         with tf.variable_scope("model/inputs", reuse=reuse):
             lrelu = tf.nn.leaky_relu
-            in_sp = self.crop(1, 0, 6)(proc_obs)
-            in_mb = self.crop(1, 6, 9)(proc_obs)
-            in_lp = self.crop(1, 9, 57)(proc_obs)
-            in_jp = self.crop(1, 57, 64)(proc_obs)
-            in_jv = self.crop(1, 64, 71)(proc_obs)
-            in_sc = self.crop(1, 71, 102)(proc_obs)
-
+            o = obs_slicing
+            in_sp = self.crop(1, o[0], o[1])(proc_obs)
+            in_mb = self.crop(1, o[1], o[2])(proc_obs)
+            in_lp = self.crop(1, o[2], o[3])(proc_obs)
+            in_jp = self.crop(1, o[3], o[4])(proc_obs)
+            in_jv = self.crop(1, o[4], o[5])(proc_obs)
+            in_sc = self.crop(1, o[5], o[6])(proc_obs)
         with tf.variable_scope("model/scan_block", reuse=reuse):
             sc_0 = tf.expand_dims(in_sc, -1)
             sc_1 = tf.layers.Conv1D(8, 9, activation=lrelu, name="sc_1")(sc_0)
@@ -53,7 +57,7 @@ class AslaugPolicy(ActorCriticPolicy):
         with tf.variable_scope("model/combination_block", reuse=reuse):
             c_0 = tf.keras.layers.Concatenate(name="m_0")([at_out, rp_out, in_jp])
             c_1 = tf.layers.Dense(64, activation=lrelu, name="m_1")(c_0)
-            c_2 = tf.layers.Dense(64, activation=lrelu, name="m_1")(c_1)
+            c_2 = tf.layers.Dense(32, activation=lrelu, name="m_1")(c_1)
             c_out = tf.layers.Dense(32, activation=lrelu, name="m_1")(c_2)
 
         with tf.variable_scope("model/actor_critic_block", reuse=reuse):
