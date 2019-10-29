@@ -4,6 +4,10 @@
 <!-- |    EDITING THIS FILE BY HAND IS NOT RECOMMENDED                                 | -->
 <!-- =================================================================================== -->
 <robot name="boundingbox" xmlns:body="http://playerstage.sourceforge.net/gazebo/xmlschema/#body" xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller" xmlns:gazebo="http://playerstage.sourceforge.net/gazebo/xmlschema/#gz" xmlns:geom="http://playerstage.sourceforge.net/gazebo/xmlschema/#geom" xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface" xmlns:joint="http://playerstage.sourceforge.net/gazebo/xmlschema/#joint" xmlns:model="http://playerstage.sourceforge.net/gazebo/xmlschema/#model" xmlns:physics="http://playerstage.sourceforge.net/gazebo/xmlschema/#physics" xmlns:renderable="http://playerstage.sourceforge.net/gazebo/xmlschema/#renderable" xmlns:rendering="http://playerstage.sourceforge.net/gazebo/xmlschema/#rendering" xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor" xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:xi="http://www.w3.org/2001/XInclude">
+
+  <material name="wall_color">
+    <color rgba="0.91 0.91 0.92 1.0"/>
+  </material>
   <!-- dummy_link -->
   <link name="base_link"/>
 
@@ -13,6 +17,7 @@
       <geometry>
         <box size="0.3 6.0 1.0"/>
       </geometry>
+      <material name="wall_color"/>
     </visual>
     <collision>
       <origin xyz="0 0 0.5"/>
@@ -33,6 +38,7 @@
       <geometry>
         <box size="0.3 6.0 1.0"/>
       </geometry>
+      <material name="wall_color"/>
     </visual>
     <collision>
       <origin xyz="0 0 0.5"/>
@@ -53,6 +59,7 @@
       <geometry>
         <box size="12.0 0.3 1.0"/>
       </geometry>
+      <material name="wall_color"/>
     </visual>
     <collision>
       <origin xyz="0 0 0.5"/>
@@ -73,6 +80,7 @@
       <geometry>
         <box size="12.0 0.3 1.0"/>
       </geometry>
+      <material name="wall_color"/>
     </visual>
     <collision>
       <origin xyz="0 0 0.5"/>

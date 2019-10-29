@@ -1,0 +1,28 @@
+<?xml version="1.0" ?>
+<robot name="floor_plane" static="true">
+
+  <material name="floor_color">
+    <color rgba="0.3 0.3 0.3 1.0"/>
+  </material>
+
+
+  <link name="base_link">
+  <visual>
+   <origin xyz="0 0 -0.05" rpy="0 0 0" />
+   <geometry>
+     <box size="50.0 50.0 0.1" />
+   </geometry>
+   <material name="floor_color"/>
+  </visual>
+  <collision>
+  <origin xyz="0 0 -0.05" rpy="0 0 0" />
+   <geometry>
+     <box size="50.0 50.0 0.1" />
+   </geometry>
+  </collision>
+  </link>
+
+<gazebo>
+	<static>true</static>
+</gazebo>
+</robot>

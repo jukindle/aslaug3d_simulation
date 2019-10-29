@@ -1,5 +1,14 @@
 <?xml version="1.0" ?>
 <robot name="my_object" static="true">
+
+  <material name="beer_color">
+    <color rgba="0.8 0.85 0.8 1.0"/>
+  </material>
+  <material name="grasp_color">
+    <color rgba="0.9 0.1 0.1 1.0"/>
+  </material>
+
+
   <link name="base_link">
   <inertial>
     <mass value="0.370" />
@@ -11,6 +20,7 @@
    <geometry>
      <mesh filename="beer_rothaus.dae"/>
    </geometry>
+   <material name="beer_color"/>
   </visual>
   <collision>
    <origin xyz="0 0 0.115" rpy="0 0 0" />
@@ -25,8 +35,9 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0.125"/>
       <geometry>
-        <sphere radius="0.05"/>
+        <sphere radius="0.035"/>
       </geometry>
+      <material name="grasp_color"/>
     </visual>
 
   </link>

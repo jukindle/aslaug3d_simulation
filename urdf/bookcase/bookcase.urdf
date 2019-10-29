@@ -5,6 +5,9 @@
 <!-- =================================================================================== -->
 <robot name="bookcase" xmlns:body="http://playerstage.sourceforge.net/gazebo/xmlschema/#body" xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller" xmlns:gazebo="http://playerstage.sourceforge.net/gazebo/xmlschema/#gz" xmlns:geom="http://playerstage.sourceforge.net/gazebo/xmlschema/#geom" xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface" xmlns:joint="http://playerstage.sourceforge.net/gazebo/xmlschema/#joint" xmlns:model="http://playerstage.sourceforge.net/gazebo/xmlschema/#model" xmlns:physics="http://playerstage.sourceforge.net/gazebo/xmlschema/#physics" xmlns:renderable="http://playerstage.sourceforge.net/gazebo/xmlschema/#renderable" xmlns:rendering="http://playerstage.sourceforge.net/gazebo/xmlschema/#rendering" xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor" xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:xi="http://www.w3.org/2001/XInclude">
   <!-- dummy_link -->
+  <material name="shelf_color">
+    <color rgba="0.23 0.18 0.15 1.0"/>
+  </material>
   <link name="dummy_link">
     <inertial>
       <origin xyz="0 0 0"/>
@@ -16,6 +19,7 @@
       <geometry>
         <box size="0.00 0.00 0.00"/>
       </geometry>
+      <material name="shelf_color"/>
     </visual>
     <collision>
       <origin xyz="0 0 0"/>
@@ -35,6 +39,7 @@
       <geometry>
         <box size="0.00 0.00 0.00"/>
       </geometry>
+      <material name="shelf_color"/>
     </visual>
     <collision>
       <origin xyz="0 0 0"/>
@@ -61,6 +66,7 @@
       <geometry>
         <box size="0.39 1.39 0.05"/>
       </geometry>
+      <material name="shelf_color"/>
     </visual>
     <collision>
       <origin xyz="0 0 0"/>
@@ -89,6 +95,7 @@
       <geometry>
         <box size="0.39 1.39 0.05"/>
       </geometry>
+      <material name="shelf_color"/>
     </visual>
     <collision>
       <origin xyz="0 0 0"/>
@@ -117,6 +124,7 @@
       <geometry>
         <box size="0.39 1.39 0.015"/>
       </geometry>
+      <material name="shelf_color"/>
     </visual>
     <collision>
       <origin xyz="0 0 0"/>
@@ -145,6 +153,7 @@
       <geometry>
         <box size="0.39 0.05 0.79"/>
       </geometry>
+      <material name="shelf_color"/>
     </visual>
     <collision>
       <origin xyz="0 0 0"/>
@@ -173,6 +182,7 @@
       <geometry>
         <box size="0.39 0.05 0.79"/>
       </geometry>
+      <material name="shelf_color"/>
     </visual>
     <collision>
       <origin xyz="0 0 0"/>
@@ -201,6 +211,7 @@
       <geometry>
         <box size="0.39 0.015 0.3375"/>
       </geometry>
+      <material name="shelf_color"/>
     </visual>
     <collision>
       <origin xyz="0 0 0"/>
@@ -229,6 +240,7 @@
       <geometry>
         <box size="0.39 0.015 0.3375"/>
       </geometry>
+      <material name="shelf_color"/>
     </visual>
     <collision>
       <origin xyz="0 0 0"/>
@@ -257,6 +269,7 @@
       <geometry>
         <box size="0.39 0.015 0.3375"/>
       </geometry>
+      <material name="shelf_color"/>
     </visual>
     <collision>
       <origin xyz="0 0 0"/>
@@ -285,6 +298,7 @@
       <geometry>
         <box size="0.39 0.015 0.3375"/>
       </geometry>
+      <material name="shelf_color"/>
     </visual>
     <collision>
       <origin xyz="0 0 0"/>
@@ -313,6 +327,7 @@
       <geometry>
         <box size="0.39 0.015 0.3375"/>
       </geometry>
+      <material name="shelf_color"/>
     </visual>
     <collision>
       <origin xyz="0 0 0"/>
@@ -341,6 +356,7 @@
       <geometry>
         <box size="0.39 0.015 0.3375"/>
       </geometry>
+      <material name="shelf_color"/>
     </visual>
     <collision>
       <origin xyz="0 0 0"/>
@@ -359,4 +375,3 @@
     <child link="separation_6_link"/>
   </joint>
 </robot>
-

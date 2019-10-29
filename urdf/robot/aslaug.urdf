@@ -23,6 +23,14 @@
   <material name="black">
     <color rgba="0.15 0.15 0.15 1.0"/>
   </material>
+
+
+  <material name="panda_white">
+    <color rgba="0.9 0.9 0.9 1.0"/>
+  </material>
+  <material name="grasp_loc_color">
+    <color rgba="0.9 0.0 0.0 1.0"/>
+  </material>
   <gazebo>
     <plugin filename="libaslaug_simple_movement.so" name="aslaug_simple_movement">
       <commandTopic>cmd_vel</commandTopic>
@@ -326,6 +334,35 @@
       </geometry>
     </collision>
   </link>
+
+  <joint name="rear_laser_joint" type="fixed">
+    <origin rpy="0 0 3.141592" xyz="-0.3932 0 0.2330"/>
+    <parent link="base_link"/>
+    <child link="rear_laser"/>
+  </joint>
+  <link name="rear_laser">
+    <inertial>
+      <mass value="0.130"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="8.01666346e-05" ixy="0.0" ixz="0.0" iyy="8.01666346e-05" iyz="0.0" izz="5.4166645e-05"/>
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <!-- Origin of this mesh is the focal point of the LIDAR. -->
+        <mesh filename="meshes/ust-10lx.stl"/>
+      </geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.0122"/>
+      <geometry>
+        <box size="0.05 0.05 0.07"/>
+      </geometry>
+    </collision>
+  </link>
+
+
   <gazebo reference="front_laser">
     <turnGravityOff>false</turnGravityOff>
     <sensor name="front_laser" type="ray">
@@ -383,6 +420,7 @@
       <geometry>
         <mesh filename="meshes/visual/link0.dae"/>
       </geometry>
+      <material name="panda_white"/>
     </visual>
     <collision>
       <geometry>
@@ -402,11 +440,13 @@
       <geometry>
         <mesh filename="meshes/visual/link1.dae"/>
       </geometry>
+      <material name="panda_white"/>
     </visual>
     <collision>
       <geometry>
         <mesh filename="meshes/collision/link1.stl"/>
       </geometry>
+
     </collision>
     <!-- for simulation -->
     <inertial>
@@ -432,6 +472,7 @@
       <geometry>
         <mesh filename="meshes/visual/link2.dae"/>
       </geometry>
+      <material name="panda_white"/>
     </visual>
     <collision>
       <geometry>
@@ -462,6 +503,7 @@
       <geometry>
         <mesh filename="meshes/visual/link3.dae"/>
       </geometry>
+      <material name="panda_white"/>
     </visual>
     <collision>
       <geometry>
@@ -492,6 +534,7 @@
       <geometry>
         <mesh filename="meshes/visual/link4.dae"/>
       </geometry>
+      <material name="panda_white"/>
     </visual>
     <collision>
       <geometry>
@@ -522,6 +565,7 @@
       <geometry>
         <mesh filename="meshes/visual/link5.dae"/>
       </geometry>
+      <material name="panda_white"/>
     </visual>
     <collision>
       <geometry>
@@ -552,6 +596,7 @@
       <geometry>
         <mesh filename="meshes/visual/link6.dae"/>
       </geometry>
+      <material name="panda_white"/>
     </visual>
     <collision>
       <geometry>
@@ -582,6 +627,7 @@
       <geometry>
         <mesh filename="meshes/visual/link7.dae"/>
       </geometry>
+      <material name="panda_white"/>
     </visual>
     <collision>
       <geometry>
@@ -632,6 +678,7 @@
       <geometry>
         <mesh filename="meshes/visual/hand.dae"/>
       </geometry>
+      <material name="panda_white"/>
     </visual>
     <collision>
       <geometry>
@@ -653,6 +700,7 @@
       <geometry>
         <sphere radius="0.02"/>
       </geometry>
+      <material name="grasp_loc_color"/>
     </visual>
 
   </link>
