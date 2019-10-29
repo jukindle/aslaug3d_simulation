@@ -1,7 +1,6 @@
 from gym import spaces
 import numpy as np
 import pybullet as pb
-import pybullet_data
 import os
 import random
 from . import aslaug_base
@@ -13,14 +12,15 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
     #              joint_pos[3], joint_vel[3]]
     # Action: [mb_d_vel_r[3], joint_d_vel[3]]
     # State: [mb_pos_w[3], mb_vel_w[3], joint_pos[3], joint_vel[3]]
-    def __init__(self, folder_name="", gui=False):
+    def __init__(self, folder_name="", gui=False, free_cam=False,
+                 recording=False):
         # Common params
         version = "v1"
         self.folder_name = folder_name
 
         params = {
             "joints": {
-                "joint_names": ['panda_joint{}'.format(i+1) for i in [0, 3]],
+                "joint_names": ['panda_joint{}'.format(i+1) for i in [0, 1, 2, 3, 4, 5, 6]],
                 "init_states": [-np.pi/2, np.pi/2, np.pi/2, -1.75, -np.pi/2,
                                 np.pi, np.pi/4],
                 "base_link_name": "panda_link0",
@@ -38,7 +38,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
             },
             "setpoint": {
                 "hold_time": 2.0,
-                "tol_lin_mag": 0.2,
+                "tol_lin_mag": 0.25,
                 "tol_ang_mag": np.pi,
                 "continious_mode": True
             },
@@ -46,7 +46,8 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                 "fac_goal_dis_lin": 10.0,
                 "fac_goal_dis_ang": 0.0,
                 "fac_ang_vel": -2.0,
-                "fac_sp_hold": 10.0,
+                "fac_sp_hold": 30.0,
+                "fac_sp_hold_near": 10.0,
                 "rew_timeout": -5.0,
                 "rew_joint_limits": -20.0,
                 "rew_collision": -25.0,
@@ -58,11 +59,11 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                 "size": 20.0,
                 "action_discretization": 7,
                 "n_bookcases": 12,
-                "corridor_width": 3.0,
+                "corridor_width": 4.0,
             },
             "sensors": {
                 "lidar": {
-                    "n_scans": 41,
+                    "n_scans": 201,
                     "ang_mag": np.pi/2,
                     "range": 5.0,
                     "link_id1": "front_laser",
@@ -71,8 +72,13 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
             }
         }
 
+        self.soft_reset = False
+        self.recording = recording
+        self.success_counter = 0
+        self.episode_counter = 0
         # Initialize super class
-        super().__init__(version, params, gui=gui, init_seed=None)
+        super().__init__(version, params, gui=gui, init_seed=None,
+                         free_cam=free_cam)
 
     def setup_action_observation_spaces(self):
         # Define action space
@@ -106,7 +112,10 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         high_j_v = np.array([self.p["joints"]["vel_mag"]]*self.n_joints)
         low_j_v = -high_j_v
         rng = self.p["sensors"]["lidar"]["range"]
-        high_scan = rng * np.ones(self.p["sensors"]["lidar"]["n_scans"])
+        n_lid = sum([self.p["sensors"]["lidar"]["link_id1"] is not None,
+                     self.p["sensors"]["lidar"]["link_id2"] is not None])
+        high_scan_s = rng * np.ones(self.p["sensors"]["lidar"]["n_scans"])
+        high_scan = np.repeat(high_scan_s, n_lid)
         low_scan = 0.1*high_scan
         high_o = np.concatenate((high_sp, high_mb, high_lp, high_j_p,
                                  high_j_v, high_scan))
@@ -114,7 +123,8 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                                 low_j_v, low_scan))
 
         self.obs_slicing = [0]
-        for e in (high_sp, high_mb, high_lp, high_j_p, high_j_v, high_scan):
+        for e in (high_sp, high_mb, high_lp, high_j_p, high_j_v) \
+                + n_lid*(high_scan_s,):
             self.obs_slicing.append(self.obs_slicing[-1] + e.shape[0])
         self.observation_space = spaces.Box(low_o, high_o)
 
@@ -135,6 +145,11 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
             reward += self.p["reward"]["rew_collision"]
             info["done_reason"] = "collision"
             done = True
+
+        if self.step_no >= self.timeout_steps:
+            reward += self.p["reward"]["rew_timeout"]
+            done = True
+            info["done_reason"] = "timeout"
 
         # Penalize velocity in move base rotation
         mb_ang_vel = self.get_base_vels()[2]
@@ -162,19 +177,29 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
 
             if self.sp_hold_time >= self.p["setpoint"]["hold_time"]:
                 if self.p["setpoint"]["continious_mode"]:
-                    # Spawn new random setpoint
-                    sp_pos = random.sample(self.possible_sp_pos, 1)[0]
-                    self.move_sp(sp_pos)
+                    self.soft_reset = True
                     self.sp_hold_time = 0.0
-                else:
+                    self.step_no = 0
+                    self.integrated_hold_reward = 0.0
+                if not self.recording:
                     done = True
                     info["done_reason"] = "success"
+                else:
+                    self.success_counter += 1
+                    self.reset()
+
                 reward += self.p["reward"]["rew_goal_reached"]
 
             self.sp_hold_time += self.tau
-            reward += self.tau*self.p["reward"]["fac_sp_hold"]
+            dis_f = 1.0-eucl_dis/self.p["setpoint"]["tol_lin_mag"]
+            rew_hold = (self.tau*self.p["reward"]["fac_sp_hold"]
+                        + self.tau*self.p["reward"]["fac_sp_hold_near"]*dis_f)
+            rew_hold = rew_hold / self.p["setpoint"]["hold_time"]
+            self.integrated_hold_reward += rew_hold
+            reward += rew_hold
         else:
-            reward -= self.sp_hold_time*self.p["reward"]["fac_sp_hold"]
+            reward -= self.integrated_hold_reward
+            self.integrated_hold_reward = 0.0
             self.sp_hold_time = 0.0
 
         return reward, done, info
@@ -184,7 +209,8 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         link_pose_r = self.get_link_states(self.link_mapping)
         j_pos, j_vel = self.get_joint_states(self.actuator_selection)
         mb_vel_w = self.get_base_vels()
-        scan = self.get_lidar_scan()
+        scan_ret = self.get_lidar_scan()
+        scan = np.concatenate([x for x in scan_ret if x])
         obs = np.concatenate((sp_pose_ee, mb_vel_w, link_pose_r.flatten(),
                               j_pos, j_vel, scan))
         return obs
@@ -193,7 +219,26 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
               init_obstacle_grid=None, init_obstacle_locations=None):
 
         # Reset internal parameters
+        self.episode_counter += 1
         self.step_no = 0
+        self.integrated_hold_reward = 0.0
+        self.sp_history = []
+
+        if self.soft_reset:
+            # Spawn random setpoint
+            sp_pos = random.sample(self.possible_sp_pos, 1)[0]
+            self.move_sp(sp_pos)
+            self.sp_history.append(sp_pos.tolist())
+
+            # Initialize reward state variables
+            self.last_eucl_dis, self.last_eucl_ang = self.calculate_goal_distance()
+            self.scl_eucl_dis = 1/self.last_eucl_dis
+            self.scl_eucl_ang = 1/self.last_eucl_ang
+            self.sp_hold_time = 0.0
+
+            self.soft_reset = False
+            return self.calculate_observation()
+
         self.state = {"base_vel": np.array([0.0, 0.0, 0.0]),
                       "joint_vel": np.array(7*[0.0])}
 
@@ -215,8 +260,9 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                            0.0, self.clientId)
         pb.resetBaseVelocity(self.robotId, [0, 0, 0], [0, 0, 0], self.clientId)
 
-        robot_pos = (0, 0, 0.02)
-        robot_init_yaw = np.pi/2 + np.random.uniform(-np.pi/4, np.pi/4)
+        x_coord = self.np_random.uniform(0.0, 7.0)
+        robot_pos = (x_coord, 0, 0.02)
+        robot_init_yaw = np.pi/2 + np.random.uniform(-np.pi, np.pi)
         robot_ori = pb.getQuaternionFromEuler([np.pi/2, 0, robot_init_yaw])
         pb.resetBasePositionAndOrientation(self.robotId, robot_pos, robot_ori,
                                            self.clientId)
@@ -226,19 +272,22 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         pos = np.array([1.0, -self.p["world"]["corridor_width"]/2, np.pi/2])
         for i in range(int(len(self.bookcaseIds)/2.0)):
             bookcaseId = self.bookcaseIds[i]
-            possible_sp_pos += self.move_bookcase(bookcaseId, pos, sp_layers=[1])
+            possible_sp_pos += self.move_bookcase(bookcaseId, pos,
+                                                  sp_layers=[1, 2, 3])
             pos[0] += 1.1 + self.np_random.uniform(0, 0.2)
 
         pos = np.array([1.0, self.p["world"]["corridor_width"]/2, -np.pi/2])
         for i in range(int(len(self.bookcaseIds)/2.0), len(self.bookcaseIds)):
             bookcaseId = self.bookcaseIds[i]
-            possible_sp_pos += self.move_bookcase(bookcaseId, pos, sp_layers=[1])
+            possible_sp_pos += self.move_bookcase(bookcaseId, pos,
+                                                  sp_layers=[1, 2, 3])
             pos[0] += 1.2 + self.np_random.uniform(0, 0.2)
         self.possible_sp_pos = possible_sp_pos
 
         # Spawn random setpoint
         sp_pos = random.sample(self.possible_sp_pos, 1)[0]
         self.move_sp(sp_pos)
+        self.sp_history.append(sp_pos.tolist())
 
         # Initialize reward state variables
         self.last_eucl_dis, self.last_eucl_ang = self.calculate_goal_distance()
@@ -248,6 +297,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
 
         # Calculate observation and return
         obs = self.calculate_observation()
+        self.last_yaw = None
         return obs
 
     def spawn_robot(self):
@@ -292,6 +342,6 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
 
     def calculate_goal_distance(self):
         sp_pose_ee = self.get_ee_sp_transform()
-        eucl_dis = np.linalg.norm(sp_pose_ee[1:3])  # Ignore x coord
+        eucl_dis = np.linalg.norm(sp_pose_ee[0:3])  # Ignore x coord
         eucl_ang = np.linalg.norm(sp_pose_ee[3:6])
         return eucl_dis, eucl_ang

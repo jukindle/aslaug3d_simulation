@@ -4,15 +4,16 @@ import numpy as np
 import pybullet as pb
 import pybullet_data
 import os
-import pybullet as pb
-
+import json
 
 class AslaugBaseEnv(gym.Env):
     metadata = {
         'render.modes': ['human', 'rgb_array']
     }
 
-    def __init__(self, version, params, gui=False, init_seed=None):
+    def __init__(self, version, params, gui=False, init_seed=None,
+                 free_cam=False):
+        self.free_cam = free_cam
         self.version = version
         self.gui = gui
         self.params = params
@@ -78,38 +79,48 @@ class AslaugBaseEnv(gym.Env):
         '''
         Renders the environment. Currently does nothing.
         '''
-
-        if mode == 'rgb_array':
+        if mode == 'rgb_array' or mode == 'human_fast' or not self.free_cam:
             camDistance = 4
             nearPlane = 0.01
             farPlane = 15
             fov = 60
 
             cam_pos, rpy = self.get_camera_pose()
+
             viewMatrix = pb.computeViewMatrixFromYawPitchRoll(cam_pos,
                                                               camDistance,
                                                               rpy[2], rpy[1],
-                                                              rpy[0], 2)
+                                                              rpy[0], 2,
+                                                              self.clientId)
+        if not self.free_cam:
+            pb.resetDebugVisualizerCamera(camDistance, rpy[2], rpy[1], cam_pos,
+                                          self.clientId)
+        if mode == 'rgb_array' or mode == 'human_fast':
             aspect = w / h
             projectionMatrix = pb.computeProjectionMatrixFOV(fov, aspect,
                                                              nearPlane,
-                                                             farPlane)
+                                                             farPlane,
+                                                             self.clientId)
             img_arr = pb.getCameraImage(w,
                                         h,
                                         viewMatrix,
                                         projectionMatrix,
                                         shadow=1,
-                                        lightDirection=[1, 1, 1],
-                                        renderer=pb.ER_BULLET_HARDWARE_OPENGL)
+                                        lightDirection=[0.5, 0.3, 1],
+                                        renderer=pb.ER_BULLET_HARDWARE_OPENGL,
+                                        physicsClientId=self.clientId)
 
             img = np.array(img_arr[2])[:, :, 0:3]
-            # from gym.envs.classic_control import rendering
-            # if self.viewer is None:
-            #     self.viewer = rendering.SimpleImageViewer()
-            # self.viewer.imshow(img)
+        if mode == 'rgb_array':
             return img
-        elif mode == 'human':
-            assert self.gui, "Must use GUI for render mode human!"
+        if mode == 'human_fast':
+            from gym.envs.classic_control import rendering
+            if self.viewer is None:
+                self.viewer = rendering.SimpleImageViewer()
+            self.viewer.imshow(img)
+            return img
+        # elif mode == 'human':
+        #     assert self.gui, "Must use GUI for render mode human!"
 
     def setup_simulation(self, gui=False):
         '''
@@ -125,7 +136,14 @@ class AslaugBaseEnv(gym.Env):
         pb.setGravity(0.0, 0.0, 0.0, self.clientId)
         pb.setPhysicsEngineParameter(fixedTimeStep=self.p["world"]["tau"])
         pb.setAdditionalSearchPath(pybullet_data.getDataPath())
-        pb.loadURDF("plane.urdf", physicsClientId=self.clientId)
+        dirname = os.path.dirname(__file__)
+        model_path = os.path.join(dirname, '../urdf/floor/plane.urdf')
+        pb.loadURDF(model_path, useFixedBase=True,
+                    physicsClientId=self.clientId)
+        pb.configureDebugVisualizer(pb.COV_ENABLE_GUI, 0)
+        pb.configureDebugVisualizer(pb.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 0)
+        pb.configureDebugVisualizer(pb.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 0)
+        pb.configureDebugVisualizer(pb.COV_ENABLE_RGB_BUFFER_PREVIEW, 0)
 
         # Spawn robot
         self.robotId = self.spawn_robot()
@@ -144,6 +162,11 @@ class AslaugBaseEnv(gym.Env):
         self.joint_mapping = np.zeros(7, dtype=int)
         self.link_mapping = np.zeros(self.n_links, dtype=int)
         self.joint_limits = np.zeros((7, 2), dtype=float)
+        self.eeLinkId = None
+        self.baseLinkId = None
+        self.lidarLinkId1 = None
+        self.lidarLinkId2 = None
+
         joint_names = ["panda_joint{}".format(x) for x in range(1, 8)]
         link_names = self.p["joints"]["link_names"]
 
@@ -302,8 +325,11 @@ class AslaugBaseEnv(gym.Env):
         '''
         state = pb.getLinkState(self.robotId, self.baseLinkId, True,
                                 False, self.clientId)
+
+        mb_ang_w = pb.getEulerFromQuaternion(state[5])[2]
         v_lin, v_ang = state[6:8]
-        return np.array(v_lin[0:2] + v_ang[2:3])
+        mb_vel_w = np.array(v_lin[0:2] + v_ang[2:3])
+        return self.rotation_matrix(mb_ang_w).T.dot(mb_vel_w)
 
     def get_lidar_scan(self):
         '''
@@ -313,20 +339,41 @@ class AslaugBaseEnv(gym.Env):
             list: Scan values for range and resolution specified in
                 params dict.
         '''
-        # Get pose of lidar
-        states = pb.getLinkState(self.robotId, self.lidarLinkId1,
-                                 False, False, self.clientId)
-        lidar_pos, lidar_ori = states[4:6]
-        lidar_pos = np.array(lidar_pos)
-        R = np.array(pb.getMatrixFromQuaternion(lidar_ori))
-        R = np.reshape(R, (3, 3))
-        scan_l = R.dot(self.rays[0]).T + lidar_pos
-        scan_h = R.dot(self.rays[1]).T + lidar_pos
-        scan_r = pb.rayTestBatch(scan_l.tolist(), scan_h.tolist(),
-                                 self.clientId)
+        scan_front = None
+        scan_rear = None
 
-        scan = [x[2]*self.p["sensors"]["lidar"]["range"] for x in scan_r]
-        return scan
+        if self.lidarLinkId1 is not None:
+            # Get pose of lidar
+            states = pb.getLinkState(self.robotId, self.lidarLinkId1,
+                                     False, False, self.clientId)
+            lidar_pos, lidar_ori = states[4:6]
+            lidar_pos = np.array(lidar_pos)
+            R = np.array(pb.getMatrixFromQuaternion(lidar_ori))
+            R = np.reshape(R, (3, 3))
+            scan_l = R.dot(self.rays[0]).T + lidar_pos
+            scan_h = R.dot(self.rays[1]).T + lidar_pos
+            scan_r = pb.rayTestBatch(scan_l.tolist(), scan_h.tolist(),
+                                     self.clientId)
+
+            scan = [x[2]*self.p["sensors"]["lidar"]["range"] for x in scan_r]
+            scan_front = scan
+
+        if self.lidarLinkId2 is not None:
+            # Get pose of lidar
+            states = pb.getLinkState(self.robotId, self.lidarLinkId2,
+                                     False, False, self.clientId)
+            lidar_pos, lidar_ori = states[4:6]
+            lidar_pos = np.array(lidar_pos)
+            R = np.array(pb.getMatrixFromQuaternion(lidar_ori))
+            R = np.reshape(R, (3, 3))
+            scan_l = R.dot(self.rays[0]).T + lidar_pos
+            scan_h = R.dot(self.rays[1]).T + lidar_pos
+            scan_r = pb.rayTestBatch(scan_l.tolist(), scan_h.tolist(),
+                                     self.clientId)
+
+            scan = [x[2]*self.p["sensors"]["lidar"]["range"] for x in scan_r]
+            scan_rear = scan
+        return [scan_front, scan_rear]
 
     def set_velocities(self, mb_vel_r, joint_vel):
         '''
@@ -435,7 +482,10 @@ class AslaugBaseEnv(gym.Env):
         '''
         Closes the environment.
         '''
-        pb.disconnect(self.clientId)
+        try:
+            pb.disconnect(self.clientId)
+        except:
+            pass
 
     def move_sp(self, pos):
         '''
@@ -445,11 +495,13 @@ class AslaugBaseEnv(gym.Env):
         Args:
             pos (numpy.array): 3D position where to move setpoint to
         '''
+        pos_sp = list(pos)
+        pos_mk = list(pos)
+        pos_mk[2] = 1.6
         ori_quat = pb.getQuaternionFromEuler([0, 0, 0])
-        pb.resetBasePositionAndOrientation(self.spId, pos, ori_quat,
+        pb.resetBasePositionAndOrientation(self.spId, pos_sp, ori_quat,
                                            self.clientId)
-        pos[2] = 1.6
-        pb.resetBasePositionAndOrientation(self.markerId, pos, ori_quat,
+        pb.resetBasePositionAndOrientation(self.markerId, pos_mk, ori_quat,
                                            self.clientId)
 
     def get_camera_pose(self):
@@ -466,5 +518,26 @@ class AslaugBaseEnv(gym.Env):
 
         yaw = (np.arctan2(spmb_uvec[1], spmb_uvec[0]) / (2.0 * np.pi) * 360.0
                - 90.0)
+        if self.last_yaw is None:
+            self.last_yaw = yaw
+
+        dy_mag = 55.0
+        yaw = self.last_yaw + 0.05*max(-dy_mag, min(dy_mag, yaw-self.last_yaw))
+        self.last_yaw = yaw
         rpy = [0, -45, yaw]
         return cam_pos, rpy
+
+    def calculate_success_rate(self):
+        if self.episode_counter <= 1:
+            return 0
+        else:
+            return self.success_counter / (self.episode_counter - 1)
+
+    def save_world(self, dir, pre_f, inf_f, ep):
+        wn = "{}.video.{}.video{:06}.world.world".format(pre_f, inf_f, ep)
+        sn = "{}.video.{}.video{:06}.setpoints.json".format(pre_f, inf_f, ep)
+        world_path = os.path.join(dir, wn)
+        sp_path = os.path.join(dir, sn)
+        pb.saveWorld(world_path, self.clientId)
+        with open(sp_path, 'w') as f:
+            json.dump(self.sp_history, f)
