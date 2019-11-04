@@ -2,7 +2,7 @@ import os
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
-
+import traceback
 
 rootdir = '/home/julien/tb_logs'
 
@@ -26,10 +26,12 @@ def on_plot_hover(event):
 def log_to_numpy(file_path):
     data = []
     for e in tf.train.summary_iterator(file_path):
-        for v in e.summary.value:
-            if v.tag == "episode_reward":
-                data.append([e.step, v.simple_value])
-
+        try:
+            for v in e.summary.value:
+                if v.tag == "episode_reward":
+                    data.append([e.step, v.simple_value])
+        except Exception:
+            pass
     return np.array(data)
 
 def smooth_data(data_in):
@@ -50,8 +52,10 @@ for subdir, dirs, files in os.walk(rootdir):
             data = log_to_numpy(file_path)
             data = smooth_data(data)
             plot.plot(data[:, 0], data[:, 1], gid=dirname)
-        except:
-            print("Error")
+        except Exception as e:
+            print("Error on {}".format(dirname))
+            print(e)
+            traceback.print_exc()
 print("Done scanning!")
 
 
