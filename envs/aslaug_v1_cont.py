@@ -63,8 +63,8 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
             },
             "sensors": {
                 "lidar": {
-                    "n_scans": 51,
-                    "ang_mag": np.pi,
+                    "n_scans": 150,
+                    "ang_mag": np.pi*3/4,
                     "range": 5.0,
                     "link_id1": "front_laser",
                     "link_id2": None
@@ -78,7 +78,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         self.episode_counter = 0
         # Initialize super class
         super().__init__(version, params, gui=gui, init_seed=None,
-                         free_cam=free_cam)
+                         free_cam=free_cam, easy_bookcases=True)
 
 
     def step(self, action):
@@ -367,12 +367,15 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         return spId
 
     def spawn_additional_objects(self):
+        # Spawn ground plane
+        pb.loadURDF('urdf/floor/plane.urdf', useFixedBase=True,
+                    physicsClientId=self.clientId)
         # Spawn bounding box
         mug_pos = [0, 0, 0.0]
         mug_ori = pb.getQuaternionFromEuler([0, 0, 0])
         dirname = os.path.dirname(__file__)
         model_path = os.path.join(dirname,
-                                  '../urdf/bounding_box/bounding_box.urdf')
+                                  '../urdf/bounding_box/bounding_box_cf.urdf')
         self.bbId = pb.loadURDF(model_path, mug_pos, mug_ori,
                                 useFixedBase=True,
                                 physicsClientId=self.clientId)
@@ -382,3 +385,57 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         eucl_dis = np.linalg.norm(sp_pose_ee[1:3])  # Ignore x coord
         eucl_ang = np.linalg.norm(sp_pose_ee[3:6])
         return eucl_dis, eucl_ang
+
+    def spawn_bookcases(self, n, easy=False):
+        '''
+        Prepares the simulation by spawning n bookcases.
+
+        Args:
+            n (int): Number of bookcases.
+        Returns:
+            list: List of bookcase IDs.
+        '''
+        pose2d = [5.0, 0.0, 0.0]
+        fn = "bookcase.urdf" if not easy else "bookcase_easy.urdf"
+        model_path = os.path.join('urdf/bookcase/', fn)
+        pos = pose2d[0:2] + [0.0]
+        ori = [0.0, 0.0] + [pose2d[2]]
+        ori_quat = pb.getQuaternionFromEuler(ori)
+
+        ids = []
+        for i in range(n):
+            bookcaseId = pb.loadURDF(model_path, pos, ori_quat,
+                                     useFixedBase=True,
+                                     physicsClientId=self.clientId)
+            ids.append(bookcaseId)
+        return ids
+
+    def move_bookcase(self, bookcaseId, pose2d, sp_layers=[0, 1, 2, 3]):
+        '''
+        Function which moves a bookcase to a new position and returns a list of
+        possible setpoint locations w.r.t. the new position.
+
+        Args:
+            bookcaseId (int): ID of bookcase.
+            pose2d (numpy.array): 2D pose to which bookcase should be moved to.
+            sp_layers (list): Selection specifying in what layers the setpoint
+                might be spawned. 0 means lowest and 3 top layer.
+        Returns:
+            list: 3D positions of possible setpoint locations w.r.t. pose2d.
+        '''
+        pos = [pose2d[0], pose2d[1], 0.0]
+        ori = [0.0, 0.0] + [pose2d[2]]
+        ori_quat = pb.getQuaternionFromEuler(ori)
+        pb.resetBasePositionAndOrientation(bookcaseId, pos, ori_quat,
+                                           self.clientId)
+
+        # Calculate possible setpoint positions
+        sp_pos = []
+        Rt = self.rotation_matrix(pose2d[2]).T
+        pos = np.array(pos)
+        for l in sp_layers:
+            z = 0.05 + 0.35*l
+            sp_pos.append(pos + Rt.dot(np.array([-0.15, 0.18, z])))
+            sp_pos.append(pos + Rt.dot(np.array([-0.15, -0.18, z])))
+
+        return sp_pos
