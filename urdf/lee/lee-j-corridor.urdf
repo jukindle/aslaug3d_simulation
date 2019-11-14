@@ -1,0 +1,1423 @@
+<?xml version="1.0" ?>
+<robot name="lee-lw">
+
+  <material name="wall_color">
+    <color rgba="0.94 0.94 0.94 1.0"/>
+  </material>
+  <material name="floor_color">
+    <color rgba="0.2 0.2 0.2 1.0"/>
+  </material>
+  <material name="shelf_gray">
+    <color rgba="0.7 0.7 0.7 1.0"/>
+  </material>
+  <material name="shelf_glass">
+    <color rgba="0.7 0.7 0.7 0.75"/>
+  </material>
+
+
+
+  <link name="world"/>
+  <joint name="world-worldsh" type="fixed">
+    <origin rpy="0 0 0" xyz="0.0195 0.012 0"/>
+    <parent link="world"/>
+    <child link="world_sh"/>
+  </joint>
+
+
+
+  <!-- Floor-->
+  <joint name="lee-floor_j" type="fixed">
+    <origin rpy="0 0 0" xyz="11 4 0"/>
+    <parent link="world_sh"/>
+    <child link="floor"/>
+  </joint>
+  <link name="floor">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.05"/>
+      <geometry>
+        <box size="25 20 0.1"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 -0.05"/>
+      <geometry>
+        <box size="25 20 0.1"/>
+      </geometry>
+      <material name="floor_color"/>
+    </visual>
+  </link>
+
+
+
+  <link name="world_sh"/>
+  <joint name="lee-lw__Wall_0_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_0"/></joint><link name="lee-lw__Wall_0">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_0_Collision_0">
+      <origin rpy="0 0 0" xyz="0.44578 -0.08842  1.4"/>
+      <geometry>
+        <box size="1.23559 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_0_Collision_1">
+      <origin rpy="0 0 0" xyz="4.33179 -0.08842  1.4"/>
+      <geometry>
+        <box size="4.72044 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_0_Collision_2">
+      <origin rpy="0 0 0" xyz="9.24919 -0.08842  1.4"/>
+      <geometry>
+        <box size="3.31436 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_0_Collision_3">
+      <origin rpy="0 0 0" xyz="13.45272 -0.08842  1.4"/>
+      <geometry>
+        <box size="3.2927 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_0_Collision_4">
+      <origin rpy="0 0 0" xyz="16.25941 -0.08842  1.4"/>
+      <geometry>
+        <box size="0.520668 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_0_Collision_5">
+      <origin rpy="0 0 0" xyz="19.7695  -0.08842  1.4"/>
+      <geometry>
+        <box size="4.69951 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_0_Collision_6">
+      <origin rpy="0 0 0" xyz="23.17358 -0.08842  1.4"/>
+      <geometry>
+        <box size="0.308725 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_0_Collision_7">
+      <origin rpy="0 0 0" xyz="1.51758 -0.08842  0"/>
+      <geometry>
+        <box size="0.908 0.15 0.01"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_0_Collision_8">
+      <origin rpy="0 0 0" xyz="7.14201 -0.08842  0"/>
+      <geometry>
+        <box size="0.9 0.15 0.01"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_0_Collision_9">
+      <origin rpy="0 0 0" xyz="11.35638 -0.08842  0"/>
+      <geometry>
+        <box size="0.9 0.15 0.01"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_0_Collision_10">
+      <origin rpy="0 0 0" xyz="15.54908 -0.08842  0"/>
+      <geometry>
+        <box size="0.9 0.15 0.01"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_0_Collision_11">
+      <origin rpy="0 0 0" xyz="16.96974 -0.08842  0"/>
+      <geometry>
+        <box size="0.9 0.15 0.01"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_0_Collision_12">
+      <origin rpy="0 0 0" xyz="22.56928 -0.08842  0"/>
+      <geometry>
+        <box size="0.9 0.15 0.01"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_0_Collision_13">
+      <origin rpy="0 0 0" xyz="1.51758 -0.08842  2.4"/>
+      <geometry>
+        <box size="0.908 0.15 0.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_0_Collision_14">
+      <origin rpy="0 0 0" xyz="7.14201 -0.08842  2.4"/>
+      <geometry>
+        <box size="0.9 0.15 0.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_0_Collision_15">
+      <origin rpy="0 0 0" xyz="11.35638 -0.08842  2.4"/>
+      <geometry>
+        <box size="0.9 0.15 0.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_0_Collision_16">
+      <origin rpy="0 0 0" xyz="15.54908 -0.08842  2.4"/>
+      <geometry>
+        <box size="0.9 0.15 0.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_0_Collision_17">
+      <origin rpy="0 0 0" xyz="16.96974 -0.08842  2.4"/>
+      <geometry>
+        <box size="0.9 0.15 0.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_0_Collision_18">
+      <origin rpy="0 0 0" xyz="22.56928 -0.08842  2.4"/>
+      <geometry>
+        <box size="0.9 0.15 0.8"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_0_Visual_0">
+      <origin rpy="0 0 0" xyz="0.44578 -0.08842  1.4"/>
+      <geometry>
+        <box size="1.23559 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_0_Visual_1">
+      <origin rpy="0 0 0" xyz="4.33179 -0.08842  1.4"/>
+      <geometry>
+        <box size="4.72044 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_0_Visual_2">
+      <origin rpy="0 0 0" xyz="9.24919 -0.08842  1.4"/>
+      <geometry>
+        <box size="3.31436 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_0_Visual_3">
+      <origin rpy="0 0 0" xyz="13.45272 -0.08842  1.4"/>
+      <geometry>
+        <box size="3.2927 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_0_Visual_4">
+      <origin rpy="0 0 0" xyz="16.25941 -0.08842  1.4"/>
+      <geometry>
+        <box size="0.520668 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_0_Visual_5">
+      <origin rpy="0 0 0" xyz="19.7695  -0.08842  1.4"/>
+      <geometry>
+        <box size="4.69951 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_0_Visual_6">
+      <origin rpy="0 0 0" xyz="23.17358 -0.08842  1.4"/>
+      <geometry>
+        <box size="0.308725 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_0_Visual_7">
+      <origin rpy="0 0 0" xyz="1.51758 -0.08842  0"/>
+      <geometry>
+        <box size="0.908 0.15 0.01"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_0_Visual_8">
+      <origin rpy="0 0 0" xyz="7.14201 -0.08842  0"/>
+      <geometry>
+        <box size="0.9 0.15 0.01"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_0_Visual_9">
+      <origin rpy="0 0 0" xyz="11.35638 -0.08842  0"/>
+      <geometry>
+        <box size="0.9 0.15 0.01"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_0_Visual_10">
+      <origin rpy="0 0 0" xyz="15.54908 -0.08842  0"/>
+      <geometry>
+        <box size="0.9 0.15 0.01"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_0_Visual_11">
+      <origin rpy="0 0 0" xyz="16.96974 -0.08842  0"/>
+      <geometry>
+        <box size="0.9 0.15 0.01"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_0_Visual_12">
+      <origin rpy="0 0 0" xyz="22.56928 -0.08842  0"/>
+      <geometry>
+        <box size="0.9 0.15 0.01"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_0_Visual_13">
+      <origin rpy="0 0 0" xyz="1.51758 -0.08842  2.4"/>
+      <geometry>
+        <box size="0.908 0.15 0.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_0_Visual_14">
+      <origin rpy="0 0 0" xyz="7.14201 -0.08842  2.4"/>
+      <geometry>
+        <box size="0.9 0.15 0.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_0_Visual_15">
+      <origin rpy="0 0 0" xyz="11.35638 -0.08842  2.4"/>
+      <geometry>
+        <box size="0.9 0.15 0.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_0_Visual_16">
+      <origin rpy="0 0 0" xyz="15.54908 -0.08842  2.4"/>
+      <geometry>
+        <box size="0.9 0.15 0.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_0_Visual_17">
+      <origin rpy="0 0 0" xyz="16.96974 -0.08842  2.4"/>
+      <geometry>
+        <box size="0.9 0.15 0.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_0_Visual_18">
+      <origin rpy="0 0 0" xyz="22.56928 -0.08842  2.4"/>
+      <geometry>
+        <box size="0.9 0.15 0.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_1_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_1"/></joint><link name="lee-lw__Wall_1">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_1_Collision">
+      <origin rpy="0      0     -1.5708" xyz="23.253   -2.76342  1.4"/>
+      <geometry>
+        <box size="5.5 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_1_Visual">
+      <origin rpy="0      0     -1.5708" xyz="23.253   -2.76342  1.4"/>
+      <geometry>
+        <box size="5.5 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_10_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_10"/></joint><link name="lee-lw__Wall_10">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_10_Collision">
+      <origin rpy="0      0      1.57709" xyz="6.36849 8.30308 1.4"/>
+      <geometry>
+        <box size="0.309462 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_10_Visual">
+      <origin rpy="0      0      1.57709" xyz="6.36849 8.30308 1.4"/>
+      <geometry>
+        <box size="0.309462 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_12_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_12"/></joint><link name="lee-lw__Wall_12">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_12_Collision">
+      <origin rpy="0      0     -1.5708" xyz="16.24599 -2.75842  1.4"/>
+      <geometry>
+        <box size="5.5 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_12_Visual">
+      <origin rpy="0      0     -1.5708" xyz="16.24599 -2.75842  1.4"/>
+      <geometry>
+        <box size="5.5 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_14_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_14"/></joint><link name="lee-lw__Wall_14">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_14_Collision">
+      <origin rpy="0      0     -1.5708" xyz="12.03898 -2.76242  1.4"/>
+      <geometry>
+        <box size="5.5 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_14_Visual">
+      <origin rpy="0      0     -1.5708" xyz="12.03898 -2.76242  1.4"/>
+      <geometry>
+        <box size="5.5 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_16_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_16"/></joint><link name="lee-lw__Wall_16">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_16_Collision">
+      <origin rpy="0      0     -1.5708" xyz="7.83699 -2.76942  1.4"/>
+      <geometry>
+        <box size="5.5 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_16_Visual">
+      <origin rpy="0      0     -1.5708" xyz="7.83699 -2.76942  1.4"/>
+      <geometry>
+        <box size="5.5 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_26_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_26"/></joint><link name="lee-lw__Wall_26">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_26_Collision_0">
+      <origin rpy="0 0 0" xyz="0.32209 9.74058 1.4"/>
+      <geometry>
+        <box size="1.4862 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_26_Collision_1">
+      <origin rpy="0 0 0" xyz="4.33254 9.74058 1.4"/>
+      <geometry>
+        <box size="4.73471 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_26_Collision_2">
+      <origin rpy="0 0 0" xyz="7.83945 9.74058 1.4"/>
+      <geometry>
+        <box size="0.479087 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_26_Collision_3">
+      <origin rpy="0 0 0" xyz="1.51519 9.74058 0"/>
+      <geometry>
+        <box size="0.9 0.15 0.01"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_26_Collision_4">
+      <origin rpy="0 0 0" xyz="7.1499  9.74058 0"/>
+      <geometry>
+        <box size="0.9 0.15 0.01"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_26_Collision_5">
+      <origin rpy="0 0 0" xyz="1.51519 9.74058 2.4"/>
+      <geometry>
+        <box size="0.9 0.15 0.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_26_Collision_6">
+      <origin rpy="0 0 0" xyz="7.1499  9.74058 2.4"/>
+      <geometry>
+        <box size="0.9 0.15 0.8"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_26_Visual_0">
+      <origin rpy="0 0 0" xyz="0.32209 9.74058 1.4"/>
+      <geometry>
+        <box size="1.4862 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_26_Visual_1">
+      <origin rpy="0 0 0" xyz="4.33254 9.74058 1.4"/>
+      <geometry>
+        <box size="4.73471 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_26_Visual_2">
+      <origin rpy="0 0 0" xyz="7.83945 9.74058 1.4"/>
+      <geometry>
+        <box size="0.479087 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_26_Visual_3">
+      <origin rpy="0 0 0" xyz="1.51519 9.74058 0"/>
+      <geometry>
+        <box size="0.9 0.15 0.01"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_26_Visual_4">
+      <origin rpy="0 0 0" xyz="7.1499  9.74058 0"/>
+      <geometry>
+        <box size="0.9 0.15 0.01"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_26_Visual_5">
+      <origin rpy="0 0 0" xyz="1.51519 9.74058 2.4"/>
+      <geometry>
+        <box size="0.9 0.15 0.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_26_Visual_6">
+      <origin rpy="0 0 0" xyz="7.1499  9.74058 2.4"/>
+      <geometry>
+        <box size="0.9 0.15 0.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_28_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_28"/></joint><link name="lee-lw__Wall_28">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_28_Collision_0">
+      <origin rpy="0     0     1.5708" xyz="-0.09698  0.1319   1.4"/>
+      <geometry>
+        <box size="0.59064 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_28_Collision_1">
+      <origin rpy="0     0     1.5708" xyz="-9.7000e-02  5.1319e+00  5.0000e-03"/>
+      <geometry>
+        <box size="9.40936 0.15 0.01"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_28_Collision_2">
+      <origin rpy="0     0     1.5708" xyz="-0.09699  2.7169   1.405"/>
+      <geometry>
+        <box size="0.99936 0.15 2.79"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_28_Collision_3">
+      <origin rpy="0     0     1.5708" xyz="-0.097    5.52718  1.405"/>
+      <geometry>
+        <box size="1.0012 0.15 2.79"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_28_Collision_4">
+      <origin rpy="0     0     1.5708" xyz="-0.09701  8.31926  1.405"/>
+      <geometry>
+        <box size="1.03896 0.15 2.79"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_28_Collision_5">
+      <origin rpy="0     0     1.5708" xyz="-0.09701  9.73766  1.405"/>
+      <geometry>
+        <box size="0.197842 0.15 2.79"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_28_Collision_6">
+      <origin rpy="0     0     1.5708" xyz="-0.09698  1.32222  2.755"/>
+      <geometry>
+        <box size="1.79 0.15 0.09"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_28_Collision_7">
+      <origin rpy="0     0     1.5708" xyz="-0.09699  4.12158  2.755"/>
+      <geometry>
+        <box size="1.81 0.15 0.09"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_28_Collision_8">
+      <origin rpy="0     0     1.5708" xyz="-0.097    6.91378  2.755"/>
+      <geometry>
+        <box size="1.772 0.15 0.09"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_28_Collision_9">
+      <origin rpy="0     0     1.5708" xyz="-0.09701  9.23874  2.755"/>
+      <geometry>
+        <box size="0.8 0.15 0.09"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_28_Collision_10">
+      <origin rpy="0     0     1.5708" xyz="-0.09699  2.7169   2.8"/>
+      <geometry>
+        <box size="0.99936 0.15 0.01"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_28_Collision_11">
+      <origin rpy="0     0     1.5708" xyz="-0.097    5.52718  2.8"/>
+      <geometry>
+        <box size="1.0012 0.15 0.01"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_28_Collision_12">
+      <origin rpy="0     0     1.5708" xyz="-0.09701  8.31926  2.8"/>
+      <geometry>
+        <box size="1.03896 0.15 0.01"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_28_Collision_13">
+      <origin rpy="0     0     1.5708" xyz="-0.09701  9.73766  2.8"/>
+      <geometry>
+        <box size="0.197842 0.15 0.01"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_28_Visual_0">
+      <origin rpy="0     0     1.5708" xyz="-0.09698  0.1319   1.4"/>
+      <geometry>
+        <box size="0.59064 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_28_Visual_1">
+      <origin rpy="0     0     1.5708" xyz="-9.7000e-02  5.1319e+00  5.0000e-03"/>
+      <geometry>
+        <box size="9.40936 0.15 0.01"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_28_Visual_2">
+      <origin rpy="0     0     1.5708" xyz="-0.09699  2.7169   1.405"/>
+      <geometry>
+        <box size="0.99936 0.15 2.79"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_28_Visual_3">
+      <origin rpy="0     0     1.5708" xyz="-0.097    5.52718  1.405"/>
+      <geometry>
+        <box size="1.0012 0.15 2.79"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_28_Visual_4">
+      <origin rpy="0     0     1.5708" xyz="-0.09701  8.31926  1.405"/>
+      <geometry>
+        <box size="1.03896 0.15 2.79"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_28_Visual_5">
+      <origin rpy="0     0     1.5708" xyz="-0.09701  9.73766  1.405"/>
+      <geometry>
+        <box size="0.197842 0.15 2.79"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_28_Visual_6">
+      <origin rpy="0     0     1.5708" xyz="-0.09698  1.32222  2.755"/>
+      <geometry>
+        <box size="1.79 0.15 0.09"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_28_Visual_7">
+      <origin rpy="0     0     1.5708" xyz="-0.09699  4.12158  2.755"/>
+      <geometry>
+        <box size="1.81 0.15 0.09"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_28_Visual_8">
+      <origin rpy="0     0     1.5708" xyz="-0.097    6.91378  2.755"/>
+      <geometry>
+        <box size="1.772 0.15 0.09"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_28_Visual_9">
+      <origin rpy="0     0     1.5708" xyz="-0.09701  9.23874  2.755"/>
+      <geometry>
+        <box size="0.8 0.15 0.09"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_28_Visual_10">
+      <origin rpy="0     0     1.5708" xyz="-0.09699  2.7169   2.8"/>
+      <geometry>
+        <box size="0.99936 0.15 0.01"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_28_Visual_11">
+      <origin rpy="0     0     1.5708" xyz="-0.097    5.52718  2.8"/>
+      <geometry>
+        <box size="1.0012 0.15 0.01"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_28_Visual_12">
+      <origin rpy="0     0     1.5708" xyz="-0.09701  8.31926  2.8"/>
+      <geometry>
+        <box size="1.03896 0.15 0.01"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_28_Visual_13">
+      <origin rpy="0     0     1.5708" xyz="-0.09701  9.73766  2.8"/>
+      <geometry>
+        <box size="0.197842 0.15 0.01"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_30_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_30"/></joint><link name="lee-lw__Wall_30">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_30_Collision">
+      <origin rpy="0      0     -1.5708" xyz="-0.097   -2.76342  1.4"/>
+      <geometry>
+        <box size="5.5 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_30_Visual">
+      <origin rpy="0      0     -1.5708" xyz="-0.097   -2.76342  1.4"/>
+      <geometry>
+        <box size="5.5 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_31_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_31"/></joint><link name="lee-lw__Wall_31">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_31_Collision">
+      <origin rpy="0 0 0" xyz="11.57798 -5.43842  1.4"/>
+      <geometry>
+        <box size="23.5 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_31_Visual">
+      <origin rpy="0 0 0" xyz="11.57798 -5.43842  1.4"/>
+      <geometry>
+        <box size="23.5 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_39_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_39"/></joint><link name="lee-lw__Wall_39">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_39_Collision">
+      <origin rpy="0 0 0" xyz="16.23491  4.40758  1.25"/>
+      <geometry>
+        <box size="0.15 0.15 2.5"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_39_Visual">
+      <origin rpy="0 0 0" xyz="16.23491  4.40758  1.25"/>
+      <geometry>
+        <box size="0.15 0.15 2.5"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_42_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_42"/></joint><link name="lee-lw__Wall_42">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_42_Collision">
+      <origin rpy="0 0 0" xyz="16.13832  5.23657  1.25"/>
+      <geometry>
+        <box size="0.15 0.15 2.5"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_42_Visual">
+      <origin rpy="0 0 0" xyz="16.13832  5.23657  1.25"/>
+      <geometry>
+        <box size="0.15 0.15 2.5"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_48_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_48"/></joint><link name="lee-lw__Wall_48">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_48_Collision">
+      <origin rpy="0     0     1.5708" xyz="16.06099  5.40958  1.4"/>
+      <geometry>
+        <box size="5.75 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_48_Visual">
+      <origin rpy="0     0     1.5708" xyz="16.06099  5.40958  1.4"/>
+      <geometry>
+        <box size="5.75 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_5_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_5"/></joint><link name="lee-lw__Wall_5">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_5_Collision_0">
+      <origin rpy="0 0 0" xyz="10.02419  2.62358  1.4"/>
+      <geometry>
+        <box size="7.4604 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_5_Collision_1">
+      <origin rpy="0 0 0" xyz="19.62319  2.62358  1.4"/>
+      <geometry>
+        <box size="7.3416 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_5_Collision_2">
+      <origin rpy="0 0 0" xyz="14.85339  2.62358  0"/>
+      <geometry>
+        <box size="2.198 0.15 0.01"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_5_Collision_3">
+      <origin rpy="0 0 0" xyz="14.85339  2.62358  2.549"/>
+      <geometry>
+        <box size="2.198 0.15 0.502"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_5_Visual_0">
+      <origin rpy="0 0 0" xyz="10.02419  2.62358  1.4"/>
+      <geometry>
+        <box size="7.4604 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_5_Visual_1">
+      <origin rpy="0 0 0" xyz="19.62319  2.62358  1.4"/>
+      <geometry>
+        <box size="7.3416 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_5_Visual_2">
+      <origin rpy="0 0 0" xyz="14.85339  2.62358  0"/>
+      <geometry>
+        <box size="2.198 0.15 0.01"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_5_Visual_3">
+      <origin rpy="0 0 0" xyz="14.85339  2.62358  2.549"/>
+      <geometry>
+        <box size="2.198 0.15 0.502"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_58_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_58"/></joint><link name="lee-lw__Wall_58">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_58_Collision">
+      <origin rpy="0      0      3.14159" xyz="-0.4767   1.28468  1.25"/>
+      <geometry>
+        <box size="0.25 0.15 2.5"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_58_Visual">
+      <origin rpy="0      0      3.14159" xyz="-0.4767   1.28468  1.25"/>
+      <geometry>
+        <box size="0.25 0.15 2.5"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_6_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_6"/></joint><link name="lee-lw__Wall_6">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_6_Collision">
+      <origin rpy="0 0 0" xyz="23.269    2.62358  1.4"/>
+      <geometry>
+        <box size="0.25 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_6_Visual">
+      <origin rpy="0 0 0" xyz="23.269    2.62358  1.4"/>
+      <geometry>
+        <box size="0.25 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_60_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_60"/></joint><link name="lee-lw__Wall_60">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_60_Collision">
+      <origin rpy="0      0      3.14159" xyz="-0.5536   4.09001  1.25"/>
+      <geometry>
+        <box size="0.25 0.15 2.5"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_60_Visual">
+      <origin rpy="0      0      3.14159" xyz="-0.5536   4.09001  1.25"/>
+      <geometry>
+        <box size="0.25 0.15 2.5"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_62_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_62"/></joint><link name="lee-lw__Wall_62">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_62_Collision">
+      <origin rpy="0      0      3.14159" xyz="-0.50239  6.92096  1.25"/>
+      <geometry>
+        <box size="0.25 0.15 2.5"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_62_Visual">
+      <origin rpy="0      0      3.14159" xyz="-0.50239  6.92096  1.25"/>
+      <geometry>
+        <box size="0.25 0.15 2.5"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_64_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_64"/></joint><link name="lee-lw__Wall_64">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_64_Collision_0">
+      <origin rpy="0     0     1.5597" xyz="13.52445  2.80138  1.4"/>
+      <geometry>
+        <box size="0.416011 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_64_Collision_1">
+      <origin rpy="0     0     1.5597" xyz="13.57481  7.33989  1.4"/>
+      <geometry>
+        <box size="1.98587 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_64_Collision_2">
+      <origin rpy="0     0     1.5597" xyz="1.353815e+01 4.036080e+00 5.000000e-03"/>
+      <geometry>
+        <box size="2.05355 0.15 0.01"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_64_Collision_3">
+      <origin rpy="0     0     1.5597" xyz="13.54954  5.0628   1.4"/>
+      <geometry>
+        <box size="0.01 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_64_Collision_4">
+      <origin rpy="0     0     1.5597" xyz="13.55667  5.7049   0"/>
+      <geometry>
+        <box size="1.28429 0.15 0.01"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_64_Collision_5">
+      <origin rpy="0     0     1.5597" xyz="13.5477   4.89703  1.405"/>
+      <geometry>
+        <box size="0.331549 0.15 2.79"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_64_Collision_6">
+      <origin rpy="0     0     1.5597" xyz="13.55667  5.7049   2.4"/>
+      <geometry>
+        <box size="1.28429 0.15 0.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_64_Collision_7">
+      <origin rpy="0     0     1.5597" xyz="13.53631  3.87032  2.755"/>
+      <geometry>
+        <box size="1.722 0.15 0.09"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_64_Collision_8">
+      <origin rpy="0     0     1.5597" xyz="13.5477   4.89703  2.8"/>
+      <geometry>
+        <box size="0.331549 0.15 0.01"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_64_Visual_0">
+      <origin rpy="0     0     1.5597" xyz="13.52445  2.80138  1.4"/>
+      <geometry>
+        <box size="0.416011 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_64_Visual_1">
+      <origin rpy="0     0     1.5597" xyz="13.57481  7.33989  1.4"/>
+      <geometry>
+        <box size="1.98587 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_64_Visual_2">
+      <origin rpy="0     0     1.5597" xyz="1.353815e+01 4.036080e+00 5.000000e-03"/>
+      <geometry>
+        <box size="2.05355 0.15 0.01"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_64_Visual_3">
+      <origin rpy="0     0     1.5597" xyz="13.54954  5.0628   1.4"/>
+      <geometry>
+        <box size="0.01 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_64_Visual_4">
+      <origin rpy="0     0     1.5597" xyz="13.55667  5.7049   0"/>
+      <geometry>
+        <box size="1.28429 0.15 0.01"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_64_Visual_5">
+      <origin rpy="0     0     1.5597" xyz="13.5477   4.89703  1.405"/>
+      <geometry>
+        <box size="0.331549 0.15 2.79"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_64_Visual_6">
+      <origin rpy="0     0     1.5597" xyz="13.55667  5.7049   2.4"/>
+      <geometry>
+        <box size="1.28429 0.15 0.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_64_Visual_7">
+      <origin rpy="0     0     1.5597" xyz="13.53631  3.87032  2.755"/>
+      <geometry>
+        <box size="1.722 0.15 0.09"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_64_Visual_8">
+      <origin rpy="0     0     1.5597" xyz="13.5477   4.89703  2.8"/>
+      <geometry>
+        <box size="0.331549 0.15 0.01"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_70_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_70"/></joint><link name="lee-lw__Wall_70">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_70_Collision">
+      <origin rpy="0      0      3.14159" xyz="-0.3937   3.21895  1.25"/>
+      <geometry>
+        <box size="0.75 0.15 2.5"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_70_Visual">
+      <origin rpy="0      0      3.14159" xyz="-0.3937   3.21895  1.25"/>
+      <geometry>
+        <box size="0.75 0.15 2.5"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_72_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_72"/></joint><link name="lee-lw__Wall_72">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_72_Collision">
+      <origin rpy="0      0      3.14159" xyz="-0.3809   5.01231  1.25"/>
+      <geometry>
+        <box size="0.75 0.15 2.5"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_72_Visual">
+      <origin rpy="0      0      3.14159" xyz="-0.3809   5.01231  1.25"/>
+      <geometry>
+        <box size="0.75 0.15 2.5"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_74_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_74"/></joint><link name="lee-lw__Wall_74">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_74_Collision">
+      <origin rpy="0      0      3.14159" xyz="-0.3809   6.01147  1.25"/>
+      <geometry>
+        <box size="0.75 0.15 2.5"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_74_Visual">
+      <origin rpy="0      0      3.14159" xyz="-0.3809   6.01147  1.25"/>
+      <geometry>
+        <box size="0.75 0.15 2.5"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_76_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_76"/></joint><link name="lee-lw__Wall_76">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_76_Collision">
+      <origin rpy="0      0      3.14159" xyz="-0.3553   7.83045  1.25"/>
+      <geometry>
+        <box size="0.75 0.15 2.5"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_76_Visual">
+      <origin rpy="0      0      3.14159" xyz="-0.3553   7.83045  1.25"/>
+      <geometry>
+        <box size="0.75 0.15 2.5"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_78_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_78"/></joint><link name="lee-lw__Wall_78">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_78_Collision">
+      <origin rpy="0      0      3.14159" xyz="-0.3937   8.81678  1.25"/>
+      <geometry>
+        <box size="0.75 0.15 2.5"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_78_Visual">
+      <origin rpy="0      0      3.14159" xyz="-0.3937   8.81678  1.25"/>
+      <geometry>
+        <box size="0.75 0.15 2.5"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_8_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_8"/></joint><link name="lee-lw__Wall_8">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_8_Collision">
+      <origin rpy="0     0     1.5708" xyz="6.36899 5.42358 1.4"/>
+      <geometry>
+        <box size="5.75 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_8_Visual">
+      <origin rpy="0     0     1.5708" xyz="6.36899 5.42358 1.4"/>
+      <geometry>
+        <box size="5.75 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_80_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_80"/></joint><link name="lee-lw__Wall_80">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_80_Collision">
+      <origin rpy="0      0      3.14159" xyz="-0.408    2.25345  1.25"/>
+      <geometry>
+        <box size="0.75 0.15 2.5"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_80_Visual">
+      <origin rpy="0      0      3.14159" xyz="-0.408    2.25345  1.25"/>
+      <geometry>
+        <box size="0.75 0.15 2.5"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_82_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_82"/></joint><link name="lee-lw__Wall_82">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_82_Collision">
+      <origin rpy="0      0      3.14159" xyz="-0.408    0.38743  1.25"/>
+      <geometry>
+        <box size="0.75 0.15 2.5"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_82_Visual">
+      <origin rpy="0      0      3.14159" xyz="-0.408    0.38743  1.25"/>
+      <geometry>
+        <box size="0.75 0.15 2.5"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_84_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_84"/></joint><link name="lee-lw__Wall_84">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_84_Collision">
+      <origin rpy="0      0      3.14159" xyz="-0.397    9.76158  1.25"/>
+      <geometry>
+        <box size="0.75 0.15 2.5"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_84_Visual">
+      <origin rpy="0      0      3.14159" xyz="-0.397    9.76158  1.25"/>
+      <geometry>
+        <box size="0.75 0.15 2.5"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_86_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_86"/></joint><link name="lee-lw__Wall_86">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_86_Collision_0">
+      <origin rpy="0 0 0" xyz="8.01773 9.74058 1.4"/>
+      <geometry>
+        <box size="0.177486 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_86_Collision_1">
+      <origin rpy="0 0 0" xyz="14.09273  9.74058  1.4"/>
+      <geometry>
+        <box size="10.1725 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_86_Collision_2">
+      <origin rpy="0 0 0" xyz="8.55648 9.74058 0"/>
+      <geometry>
+        <box size="0.9 0.15 0.01"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_86_Collision_3">
+      <origin rpy="0 0 0" xyz="8.55648 9.74058 2.4"/>
+      <geometry>
+        <box size="0.9 0.15 0.8"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_86_Visual_0">
+      <origin rpy="0 0 0" xyz="8.01773 9.74058 1.4"/>
+      <geometry>
+        <box size="0.177486 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_86_Visual_1">
+      <origin rpy="0 0 0" xyz="14.09273  9.74058  1.4"/>
+      <geometry>
+        <box size="10.1725 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_86_Visual_2">
+      <origin rpy="0 0 0" xyz="8.55648 9.74058 0"/>
+      <geometry>
+        <box size="0.9 0.15 0.01"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_86_Visual_3">
+      <origin rpy="0 0 0" xyz="8.55648 9.74058 2.4"/>
+      <geometry>
+        <box size="0.9 0.15 0.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_88_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_88"/></joint><link name="lee-lw__Wall_88">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_88_Collision">
+      <origin rpy="0      0      0.00471" xyz="9.97699 8.24058 1.4"/>
+      <geometry>
+        <box size="7.36585 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_88_Visual">
+      <origin rpy="0      0      0.00471" xyz="9.97699 8.24058 1.4"/>
+      <geometry>
+        <box size="7.36585 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_90_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_90"/></joint><link name="lee-lw__Wall_90">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_90_Collision_0">
+      <origin rpy="0 0 0" xyz="13.63199  8.25758  1.4"/>
+      <geometry>
+        <box size="0.243994 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_90_Collision_1">
+      <origin rpy="0 0 0" xyz="16.22699  8.25758  1.4"/>
+      <geometry>
+        <box size="0.566006 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_90_Collision_2">
+      <origin rpy="0 0 0" xyz="14.84898  8.25758  0"/>
+      <geometry>
+        <box size="2.19 0.15 0.01"/>
+      </geometry>
+    </collision>
+    <collision name="lee-lw__Wall_90_Collision_3">
+      <origin rpy="0 0 0" xyz="14.84898  8.25758  2.549"/>
+      <geometry>
+        <box size="2.19 0.15 0.502"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_90_Visual_0">
+      <origin rpy="0 0 0" xyz="13.63199  8.25758  1.4"/>
+      <geometry>
+        <box size="0.243994 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_90_Visual_1">
+      <origin rpy="0 0 0" xyz="16.22699  8.25758  1.4"/>
+      <geometry>
+        <box size="0.566006 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_90_Visual_2">
+      <origin rpy="0 0 0" xyz="14.84898  8.25758  0"/>
+      <geometry>
+        <box size="2.19 0.15 0.01"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+    <visual name="lee-lw__Wall_90_Visual_3">
+      <origin rpy="0 0 0" xyz="14.84898  8.25758  2.549"/>
+      <geometry>
+        <box size="2.19 0.15 0.502"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_94_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_94"/></joint><link name="lee-lw__Wall_94">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_94_Collision">
+      <origin rpy="0       0      -1.56947" xyz="7.82949 11.58108  1.4"/>
+      <geometry>
+        <box size="3.90727 0.15 2.8"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_94_Visual">
+      <origin rpy="0       0      -1.56947" xyz="7.82949 11.58108  1.4"/>
+      <geometry>
+        <box size="3.90727 0.15 2.8"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+  <joint name="lee-lw__Wall_96_joint" type="fixed"><parent link="world_sh"/><child link="lee-lw__Wall_96"/></joint><link name="lee-lw__Wall_96">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="lee-lw__Wall_96_Collision">
+      <origin rpy="0     0     1.5708" xyz="-0.153   11.04793  1.25"/>
+      <geometry>
+        <box size="1 0.15 2.5"/>
+      </geometry>
+    </collision>
+    <visual name="lee-lw__Wall_96_Visual">
+      <origin rpy="0     0     1.5708" xyz="-0.153   11.04793  1.25"/>
+      <geometry>
+        <box size="1 0.15 2.5"/>
+      </geometry>
+      <material name="wall_color"/>
+    </visual>
+  </link>
+
+
+
+</robot>
