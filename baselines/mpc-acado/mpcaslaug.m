@@ -7,8 +7,8 @@ clear all;
 close all;
 
 %% Define parameters
-Ts = 0.25;   % Model descretizazion step
-H = 1.0;     % Horizon
+Ts = 0.125;   % Model descretizazion step
+H = 0.5;     % Horizon
 
 % Robot pole lengths
 l1 = [0.377; 0.074];
@@ -16,9 +16,9 @@ l2 = [0.461; -0.104];
 l3 = [0.272; 0.0];
 
 % Lidar specs
-lidar_N = 1;
-lidar_Nt = 51;
-lidar_ang = pi;
+lidar_N = 3;
+lidar_Nt = 150;
+lidar_ang = pi*3/4;
 
 %% Load python communication wrapper for env
 [a,b,c] = pyversion;
@@ -195,13 +195,15 @@ BEGIN_ACADO;
     end
 
     % Create real time algorithm and specify params
-    algo = acado.RealTimeAlgorithm(ocp, 0.2);
-    algo.set('MAX_NUM_ITERATIONS', 3 );
-    algo.set('HESSIAN_APPROXIMATION', 'GAUSS_NEWTON' );
-    algo.set('DISCRETIZATION_TYPE', 'MULTIPLE_SHOOTING');
-    algo.set( 'MAX_NUM_QP_ITERATIONS', 500 );
-    algo.set( 'HOTSTART_QP', 'YES' );
-    algo.set( 'LEVENBERG_MARQUARDT', 1e-10 );
+    algo = acado.RealTimeAlgorithm(ocp, 0.02);
+    algo.set('KKT_TOLERANCE', 1e-2);
+    algo.set('INTEGRATOR_TOLERANCE', 1e-3);
+%     algo.set('MAX_NUM_ITERATIONS', 3 );
+%     algo.set('HESSIAN_APPROXIMATION', 'GAUSS_NEWTON' );
+%     algo.set('DISCRETIZATION_TYPE', 'MULTIPLE_SHOOTING');
+%     algo.set( 'MAX_NUM_QP_ITERATIONS', 500 );
+%     algo.set( 'HOTSTART_QP', 'YES' );
+%     algo.set( 'LEVENBERG_MARQUARDT', 1e-10 );
     % algo.set( 'NUM_INTEGRATOR_STEPS', round(H/Ts)); % does not exist
     % algo.set( 'QP_SOLVER', 'QP_QPOASES' ); % does not exist
     % algo.set( 'INTEGRATOR_TYPE', 'INT_IRK_GL4' ); % Hangs up matlab
@@ -234,7 +236,7 @@ function obs_p = process_obs(obs_r, lidar_N, lidar_Nt, lidar_ang, l1, l2, l3)
     R = @(a) [cos(a), -sin(a); sin(a) cos(a)];
     C = @(a) [0, -a; a, 0];
     
-    
+    obs_r
     obs_p = zeros(1, 9+3*2+lidar_N*2);
     obs_p(1:9) = [obs_r(3), -obs_r(2), ...
                   obs_r(46), -obs_r(47), obs_r(48), -obs_r(49), ...
@@ -246,6 +248,12 @@ function obs_p = process_obs(obs_r, lidar_N, lidar_Nt, lidar_ang, l1, l2, l3)
     obs_p(14:15) = R(obs_p(3))*(l1 + R(obs_p(4))*(l2+l3));
     % Calculate lidar poses (x, y)
     sc = obs_r(50:50+lidar_Nt-1);
+   % sc(23:27) = 5;
+    sc2 = zeros(1, lidar_Nt);
+   
+    th = linspace(-lidar_ang+pi/2, lidar_ang+pi/2, lidar_Nt);
+    %polarscatter(th, sc)
+    %pause(0.01)
     if lidar_Nt ~= lidar_N
         sc_f = min(reshape(sc, lidar_Nt/lidar_N, []));
     else
@@ -256,7 +264,26 @@ function obs_p = process_obs(obs_r, lidar_N, lidar_Nt, lidar_ang, l1, l2, l3)
     sc_x = cos(angs).*sc_f;
     sc_y = sin(angs).*sc_f;
     
+    angs = linspace(-lidar_ang, lidar_ang, lidar_Nt);
+    sc_xt = cos(angs).*sc;
+    sc_yt = sin(angs).*sc;
+    points = [sc_xt' sc_yt'];
+    
     obs_p(16:end) = reshape(cat(1, sc_x, sc_y), 1, []);
+    
+    
+    
+    plot(points(:,1),points(:,2),'o');
+    hold on
+
+
+    [x1 y1 x2 y2] = get_lines(points);
+
+    plot(x1, y1, 'g-')
+    plot(x2, y2, 'g-')
+    legend('Noisy points','Least squares fit','Robust fit');
+    hold off
+    pause(0.01);
 end
 
 
@@ -264,4 +291,28 @@ end
 function inp_p = process_inp(inp_r)
     inp_p = inp_r(1:5);
     inp_p(5) = -inp_p(5);
+end
+
+function [x1 y1 x2 y2] = get_lines(points)
+    sampleSize = 2; % number of points to sample per trial
+    maxDistance = 0.2; % max allowable distance for inliers
+
+    fitLineFcn = @(points) polyfit(points(:,1),points(:,2),1); % fit function using polyfit
+    evalLineFcn = ...   % distance evaluation function
+      @(model, points) sum((points(:, 2) - polyval(model, points(:,1))).^2,2);
+
+    [modelRANSAC, inlierIdx] = ransac(points,fitLineFcn,evalLineFcn, ...
+      sampleSize,maxDistance);
+    modelInliers = polyfit(points(inlierIdx,1),points(inlierIdx,2),1);
+    inlierPts = points(inlierIdx,:);
+    x1 = [min(inlierPts(:,1)) max(inlierPts(:,1))];
+    y1 = modelInliers(1)*x1 + modelInliers(2);
+    points = points(~inlierIdx,:);
+    
+    [modelRANSAC, inlierIdx] = ransac(points,fitLineFcn,evalLineFcn, ...
+      sampleSize,maxDistance);
+    modelInliers = polyfit(points(inlierIdx,1),points(inlierIdx,2),1);
+    inlierPts = points(inlierIdx,:);
+    x2 = [min(inlierPts(:,1)) max(inlierPts(:,1))];
+    y2 = modelInliers(1)*x2 + modelInliers(2);
 end
