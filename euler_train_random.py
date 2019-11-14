@@ -103,15 +103,9 @@ if __name__ == '__main__':
             env.set_attr(cl_entry["param"], cl_entry["start"])
 
 
-
-
-
-
-
-
     hyperparams_ranges = {
         "nminibatches": [4, 8, 16, 32],
-        "n_steps": [16, 32, 64, 128, 256, 512, 1024, 2048],
+        "n_steps": [256, 512, 1024, 2048],
         "gamma": [0.9, 0.95, 0.98, 0.99, 0.995, 0.999, 0.9999],
         "learning_rate": (1e-5, 1e-3),
         "ent_coef": (0.00000001, 0.01),
