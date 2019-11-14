@@ -1,0 +1,85 @@
+{
+  "learning_params": {
+    "cliprange": 0.2,
+    "cliprange_vf": -1,
+    "ent_coef": 0.003760312514286235,
+    "gamma": 0.99,
+    "lam": 0.8,
+    "learning_rate": 0.0007974227066470103,
+    "n_steps": 2048,
+    "nminibatches": 8,
+    "noptepochs": 30
+  },
+  "environment_params": {
+    "base": {
+      "acc_mag": [1.5, 0.0001, 0.7],
+      "vel_mag":[0.4, 0.0001, 1.0]
+    },
+    "joints": {
+      "acc_mag": 0.75,
+      "base_link_name": "panda_link0",
+      "ee_link_name": "grasp_loc",
+      "init_states": [-1.5708, 1.5708, 1.5708, -1.75, -1.5708, 3.14159, 0.7854],
+      "joint_names": ["panda_joint1", "panda_joint4"],
+      "link_mag": [0.33, 0.67, 0.75, 1.16, 1.28, 1.56],
+      "link_names": ["panda_link1","panda_link3","panda_link4","panda_link5",
+                     "panda_link7","grasp_loc"],
+      "vel_mag": 1
+    },
+    "reward": {
+      "fac_ang_vel": 0.0,
+      "fac_goal_dis_ang": 0,
+      "fac_base_sp_ang": 5,
+      "fac_goal_dis_lin": 25,
+      "fac_sp_hold": 30,
+      "fac_sp_hold_near": 10,
+      "rew_collision": -30,
+      "rew_goal_reached": 35,
+      "rew_joint_limits": -20,
+      "rew_timeout": -10
+    },
+    "sensors": {
+      "lidar": {
+        "ang_mag": 1.5708,
+        "link_id1": "front_laser",
+        "link_id2": "rear_laser",
+        "n_scans": 201,
+        "range": 5
+      }
+    },
+    "setpoint": {
+      "continious_mode": true,
+      "hold_time": 2,
+      "tol_ang_mag": 3.14159,
+      "tol_lin_mag": 0.2
+    },
+    "world": {
+      "action_discretization": 7,
+      "corridor_width": 4,
+      "n_bookcases": 12,
+      "size": 20,
+      "tau": 0.02,
+      "timeout": 60,
+      "random_objects": [
+        {"file": "shelf1", "prob": 1, "pose2d": [7.185, 2.635, 0],
+          "d_low": [-1.0, -0.1, 0], "d_high": [0.0, 0.1, 0]},
+        {"file": "shelf2", "prob": 1, "pose2d": [8.785, 2.635, 0],
+          "d_low": [-0.2, -0.1, 0], "d_high": [0.5, 0.1, 0]},
+        {"file": "shelf3", "prob": 1, "pose2d": [9.885, 2.635, 0],
+          "d_low": [0.0, -0.1, 0], "d_high": [2.0, 0.1, 0]},
+        {"file": "shelf4", "prob": 1, "pose2d": [12.128, 2.635, 0],
+          "d_low": [0.0, -0.1, 0], "d_high": [6.0, 0.1, 0]},
+        {"file": "shelf5", "prob": 1, "pose2d": [17.719, 2.635, 0],
+          "d_low": [-3.0, -0.1, 0], "d_high": [1.5, 0.1, 0]},
+        {"file": "shelf6", "prob": 1, "pose2d": [22.211, 2.635, 0],
+          "d_low": [-1.5, -0.1, 0], "d_high": [0.0, 0.1, 0]},
+        {"file": "shelf7", "prob": 1, "pose2d": [9.586, 0, 0],
+          "d_low": [-0.2, -0.1, 0], "d_high": [1.7, 0.1, 0]},
+        {"file": "shelf8", "prob": 1, "pose2d": [12.326, 0, 0],
+          "d_low": [0.0, -0.1, 0], "d_high": [1.5, 0.1, 0]},
+        {"file": "shelf9", "prob": 1, "pose2d": [13.719, 0, 0],
+          "d_low": [0.0, -0.1, 0], "d_high": [1.0, 0.1, 0]}
+      ]
+    }
+  }
+}

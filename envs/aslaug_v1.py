@@ -1,7 +1,6 @@
 from gym import spaces
 import numpy as np
 import pybullet as pb
-import os
 import random
 from . import aslaug_base
 
@@ -13,69 +12,15 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
     # Action: [mb_d_vel_r[3], joint_d_vel[3]]
     # State: [mb_pos_w[3], mb_vel_w[3], joint_pos[3], joint_vel[3]]
     def __init__(self, folder_name="", gui=False, free_cam=False,
-                 recording=False):
+                 recording=False, params=None):
         # Common params
         version = "v1"
         self.folder_name = folder_name
-
-        params = {
-            "joints": {
-                "joint_names": ['panda_joint{}'.format(i+1) for i in [0, 1, 2, 3, 4, 5, 6]],
-                "init_states": [-np.pi/2, np.pi/2, np.pi/2, -1.75, -np.pi/2,
-                                np.pi, np.pi/4],
-                "base_link_name": "panda_link0",
-                "ee_link_name": "grasp_loc",
-                "link_names": (['panda_link{}'.format(i)
-                                for i in [1, 3, 4, 5, 7]]
-                               + ['grasp_loc']),
-                "link_mag": [0.33, 0.67, 0.75, 1.16, 1.28, 1.56],
-                "vel_mag": 1.0,
-                "acc_mag": 0.75
-            },
-            "base": {
-                "vel_mag": np.array([0.4, 0.4, 0.75]),
-                "acc_mag": np.array([1.5, 1.5, 0.5])
-            },
-            "setpoint": {
-                "hold_time": 2.0,
-                "tol_lin_mag": 0.25,
-                "tol_ang_mag": np.pi,
-                "continious_mode": True
-            },
-            "reward": {
-                "fac_goal_dis_lin": 10.0,
-                "fac_goal_dis_ang": 0.0,
-                "fac_ang_vel": -2.0,
-                "fac_sp_hold": 30.0,
-                "fac_sp_hold_near": 10.0,
-                "rew_timeout": -5.0,
-                "rew_joint_limits": -20.0,
-                "rew_collision": -25.0,
-                "rew_goal_reached": 35.0
-            },
-            "world": {
-                "tau": 0.02,
-                "timeout": 30.0,
-                "size": 20.0,
-                "action_discretization": 7,
-                "n_bookcases": 12,
-                "corridor_width": 4.0,
-            },
-            "sensors": {
-                "lidar": {
-                    "n_scans": 201,
-                    "ang_mag": np.pi/2,
-                    "range": 5.0,
-                    "link_id1": "front_laser",
-                    "link_id2": "rear_laser"
-                }
-            }
-        }
-
         self.soft_reset = False
         self.recording = recording
         self.success_counter = 0
         self.episode_counter = 0
+
         # Initialize super class
         super().__init__(version, params, gui=gui, init_seed=None,
                          free_cam=free_cam)
@@ -146,19 +91,16 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
             info["done_reason"] = "collision"
             done = True
 
-        if self.step_no >= self.timeout_steps:
-            reward += self.p["reward"]["rew_timeout"]
-            done = True
-            info["done_reason"] = "timeout"
-
         # Penalize velocity in move base rotation
         mb_ang_vel = self.get_base_vels()[2]
         reward += np.abs(mb_ang_vel)*self.tau*self.p["reward"]["fac_ang_vel"]
 
-        # # Penalize velocity of joints
-        # j_vel_mag = np.array([self.p["joints"]["vel_mag"]]*self.n_joints)
-        # j_pos, j_vel = self.get_joint_states()
-        # reward -= 1.1*self.tau*(np.abs(j_vel)/j_vel_mag).sum()
+        # Check for timeout
+        if self.step_no >= self.timeout_steps:
+            reward += self.p["reward"]["rew_timeout"]
+            info["done_reason"] = "timeout"
+            done = True
+
         # Calculate goal distance
         eucl_dis, eucl_ang = self.calculate_goal_distance()
 
@@ -222,22 +164,24 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         self.episode_counter += 1
         self.step_no = 0
         self.integrated_hold_reward = 0.0
-        self.sp_history = []
 
         if self.soft_reset:
             # Spawn random setpoint
             sp_pos = random.sample(self.possible_sp_pos, 1)[0]
             self.move_sp(sp_pos)
-            self.sp_history.append(sp_pos.tolist())
+            self.sp_history.append(sp_pos)
 
             # Initialize reward state variables
-            self.last_eucl_dis, self.last_eucl_ang = self.calculate_goal_distance()
+            eucl_dis, eucl_ang = self.calculate_goal_distance()
+            self.last_eucl_dis, self.last_eucl_ang = eucl_dis, eucl_ang
             self.scl_eucl_dis = 1/self.last_eucl_dis
             self.scl_eucl_ang = 1/self.last_eucl_ang
             self.sp_hold_time = 0.0
 
             self.soft_reset = False
             return self.calculate_observation()
+        else:
+            self.sp_history = []
 
         self.state = {"base_vel": np.array([0.0, 0.0, 0.0]),
                       "joint_vel": np.array(7*[0.0])}
@@ -273,21 +217,21 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         for i in range(int(len(self.bookcaseIds)/2.0)):
             bookcaseId = self.bookcaseIds[i]
             possible_sp_pos += self.move_bookcase(bookcaseId, pos,
-                                                  sp_layers=[1, 2, 3])
+                                                  sp_layers=[1])
             pos[0] += 1.1 + self.np_random.uniform(0, 0.2)
 
         pos = np.array([1.0, self.p["world"]["corridor_width"]/2, -np.pi/2])
         for i in range(int(len(self.bookcaseIds)/2.0), len(self.bookcaseIds)):
             bookcaseId = self.bookcaseIds[i]
             possible_sp_pos += self.move_bookcase(bookcaseId, pos,
-                                                  sp_layers=[1, 2, 3])
+                                                  sp_layers=[1])
             pos[0] += 1.2 + self.np_random.uniform(0, 0.2)
         self.possible_sp_pos = possible_sp_pos
 
         # Spawn random setpoint
         sp_pos = random.sample(self.possible_sp_pos, 1)[0]
         self.move_sp(sp_pos)
-        self.sp_history.append(sp_pos.tolist())
+        self.sp_history.append(sp_pos)
 
         # Initialize reward state variables
         self.last_eucl_dis, self.last_eucl_ang = self.calculate_goal_distance()
@@ -304,8 +248,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         # Spawn robot
         robot_pos = [0, 0, 0.02]
         robot_ori = pb.getQuaternionFromEuler([0, 0, 0])
-        dirname = os.path.dirname(__file__)
-        model_path = os.path.join(dirname, '../urdf/robot/aslaug.urdf')
+        model_path = 'urdf/robot/aslaug.urdf'
         return pb.loadURDF(model_path, robot_pos, robot_ori,
                            useFixedBase=True,
                            physicsClientId=self.clientId)
@@ -314,9 +257,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         # Spawn setpoint
         mug_pos = [5, 2, 0.0]
         mug_ori = pb.getQuaternionFromEuler([0, 0, 0])
-        dirname = os.path.dirname(__file__)
-        model_path = os.path.join(dirname,
-                                  '../urdf/beer_rothaus/beer_rothaus.urdf')
+        model_path = 'urdf/beer_rothaus/beer_rothaus.urdf'
         spId = pb.loadURDF(model_path, mug_pos, mug_ori,
                            useFixedBase=True,
                            physicsClientId=self.clientId)
@@ -330,18 +271,73 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         return spId
 
     def spawn_additional_objects(self):
+        # Spawn ground plane
+        pb.loadURDF('urdf/floor/plane.urdf', useFixedBase=True,
+                    physicsClientId=self.clientId)
         # Spawn bounding box
         mug_pos = [0, 0, 0.0]
         mug_ori = pb.getQuaternionFromEuler([0, 0, 0])
-        dirname = os.path.dirname(__file__)
-        model_path = os.path.join(dirname,
-                                  '../urdf/bounding_box/bounding_box.urdf')
+        model_path = 'urdf/bounding_box/bounding_box.urdf'
         self.bbId = pb.loadURDF(model_path, mug_pos, mug_ori,
                                 useFixedBase=True,
                                 physicsClientId=self.clientId)
 
     def calculate_goal_distance(self):
         sp_pose_ee = self.get_ee_sp_transform()
-        eucl_dis = np.linalg.norm(sp_pose_ee[0:3])  # Ignore x coord
+        eucl_dis = np.linalg.norm(sp_pose_ee[1:3])  # Ignore x coord
         eucl_ang = np.linalg.norm(sp_pose_ee[3:6])
         return eucl_dis, eucl_ang
+
+    def spawn_bookcases(self, n, easy=False):
+        '''
+        Prepares the simulation by spawning n bookcases.
+
+        Args:
+            n (int): Number of bookcases.
+        Returns:
+            list: List of bookcase IDs.
+        '''
+        pose2d = [5.0, 0.0, 0.0]
+        fn = "bookcase.urdf" if not easy else "bookcase_easy.urdf"
+        model_path = 'urdf/bookcase/' + fn
+        pos = pose2d[0:2] + [0.0]
+        ori = [0.0, 0.0] + [pose2d[2]]
+        ori_quat = pb.getQuaternionFromEuler(ori)
+
+        ids = []
+        for i in range(n):
+            bookcaseId = pb.loadURDF(model_path, pos, ori_quat,
+                                     useFixedBase=True,
+                                     physicsClientId=self.clientId)
+            ids.append(bookcaseId)
+        return ids
+
+    def move_bookcase(self, bookcaseId, pose2d, sp_layers=[0, 1, 2, 3]):
+        '''
+        Function which moves a bookcase to a new position and returns a list of
+        possible setpoint locations w.r.t. the new position.
+
+        Args:
+            bookcaseId (int): ID of bookcase.
+            pose2d (numpy.array): 2D pose to which bookcase should be moved to.
+            sp_layers (list): Selection specifying in what layers the setpoint
+                might be spawned. 0 means lowest and 3 top layer.
+        Returns:
+            list: 3D positions of possible setpoint locations w.r.t. pose2d.
+        '''
+        pos = [pose2d[0], pose2d[1], 0.0]
+        ori = [0.0, 0.0] + [pose2d[2]]
+        ori_quat = pb.getQuaternionFromEuler(ori)
+        pb.resetBasePositionAndOrientation(bookcaseId, pos, ori_quat,
+                                           self.clientId)
+
+        # Calculate possible setpoint positions
+        sp_pos = []
+        Rt = self.rotation_matrix(pose2d[2]).T
+        pos = np.array(pos)
+        for l in sp_layers:
+            z = 0.05 + 0.35*l
+            sp_pos.append(pos + Rt.dot(np.array([-0.15, 0.18, z])))
+            sp_pos.append(pos + Rt.dot(np.array([-0.15, -0.18, z])))
+
+        return sp_pos

@@ -6,16 +6,24 @@ import pybullet_data
 import os
 import json
 
+
 class AslaugBaseEnv(gym.Env):
     metadata = {
         'render.modes': ['human', 'rgb_array']
     }
 
     def __init__(self, version, params, gui=False, init_seed=None,
-                 free_cam=False):
+                 free_cam=False, easy_bookcases=False):
         self.free_cam = free_cam
         self.version = version
         self.gui = gui
+
+        if params is None:
+            print("No env params specified, using default.")
+            with open("envs/default_params.json") as f:
+                params_all = json.load(f)
+            params = params_all["environment_params"]
+        params = self.numpyfy_dict(params)
         self.params = params
         self.viewer = None
 
@@ -30,7 +38,7 @@ class AslaugBaseEnv(gym.Env):
         self.step_no = 0
 
         # Set up simulation
-        self.setup_simulation(gui=gui)
+        self.setup_simulation(gui=gui, easy_bookcases=easy_bookcases)
 
         self.setup_action_observation_spaces()
 
@@ -122,7 +130,7 @@ class AslaugBaseEnv(gym.Env):
         # elif mode == 'human':
         #     assert self.gui, "Must use GUI for render mode human!"
 
-    def setup_simulation(self, gui=False):
+    def setup_simulation(self, gui=False, easy_bookcases=False):
         '''
         Initializes the simulation by setting up the environment and spawning
         all objects used later.
@@ -134,12 +142,10 @@ class AslaugBaseEnv(gym.Env):
         mode = pb.GUI if gui else pb.DIRECT
         self.clientId = pb.connect(mode)
         pb.setGravity(0.0, 0.0, 0.0, self.clientId)
-        pb.setPhysicsEngineParameter(fixedTimeStep=self.p["world"]["tau"])
+        pb.setPhysicsEngineParameter(fixedTimeStep=self.p["world"]["tau"],
+                                     physicsClientId=self.clientId)
         pb.setAdditionalSearchPath(pybullet_data.getDataPath())
-        dirname = os.path.dirname(__file__)
-        model_path = os.path.join(dirname, '../urdf/floor/plane.urdf')
-        pb.loadURDF(model_path, useFixedBase=True,
-                    physicsClientId=self.clientId)
+
         pb.configureDebugVisualizer(pb.COV_ENABLE_GUI, 0)
         pb.configureDebugVisualizer(pb.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 0)
         pb.configureDebugVisualizer(pb.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 0)
@@ -152,10 +158,16 @@ class AslaugBaseEnv(gym.Env):
         self.spId = self.spawn_setpoint()
 
         # Spawn all objects in the environment
-        self.spawn_additional_objects()
+        self.additionalIds = self.spawn_additional_objects()
+
+        # Enable collision of base and all objects
+        for id in self.additionalIds:
+            pb.setCollisionFilterPair(self.robotId, id, -1, -1, True,
+                                      self.clientId)
 
         # Spawn bookcases
-        self.bookcaseIds = self.spawn_bookcases(self.p["world"]["n_bookcases"])
+        self.spawn_bookcases(self.p["world"]["n_bookcases"],
+                             easy=easy_bookcases)
 
         # Figure out joint mapping: self.joint_mapping maps as in
         # desired_mapping list.
@@ -251,6 +263,31 @@ class AslaugBaseEnv(gym.Env):
             numpy.array: 6D pose of setpoint in end effector frame.
         '''
         state_ee = pb.getLinkState(self.robotId, self.eeLinkId,
+                                   False, False, self.clientId)
+        ee_pos_w, ee_ori_w = state_ee[4:6]
+        w_pos_ee, w_ori_ee = pb.invertTransform(ee_pos_w, ee_ori_w,
+                                                self.clientId)
+
+        state_sp = pb.getLinkState(self.spId, self.spGraspLinkId,
+                                   False, False, self.clientId)
+        sp_pos_w, sp_ori_w = state_sp[4:6]
+
+        sp_pos_ee, sp_ori_ee = pb.multiplyTransforms(w_pos_ee, w_ori_ee,
+                                                     sp_pos_w, sp_ori_w,
+                                                     self.clientId)
+
+        sp_eul_ee = pb.getEulerFromQuaternion(sp_ori_ee, self.clientId)
+
+        return np.array(sp_pos_ee + sp_eul_ee)
+
+    def get_base_sp_transform(self):
+        '''
+        Calculates pose of setpoint w.r.t. base frame.
+
+        Returns:
+            numpy.array: 6D pose of setpoint in base frame.
+        '''
+        state_ee = pb.getLinkState(self.robotId, self.baseLinkId,
                                    False, False, self.clientId)
         ee_pos_w, ee_ori_w = state_ee[4:6]
         w_pos_ee, w_ori_ee = pb.invertTransform(ee_pos_w, ee_ori_w,
@@ -424,67 +461,13 @@ class AslaugBaseEnv(gym.Env):
         return len(pb.getContactPoints(bodyA=self.robotId,
                                        physicsClientId=self.clientId)) > 0
 
-    def spawn_bookcases(self, n):
-        '''
-        Prepares the simulation by spawning n bookcases.
-
-        Args:
-            n (int): Number of bookcases.
-        Returns:
-            list: List of bookcase IDs.
-        '''
-        pose2d = [5.0, 0.0, 0.0]
-        dirname = os.path.dirname(__file__)
-        model_path = os.path.join(dirname, '../urdf/bookcase/bookcase.urdf')
-        pos = pose2d[0:2] + [0.0]
-        ori = [0.0, 0.0] + [pose2d[2]]
-        ori_quat = pb.getQuaternionFromEuler(ori)
-
-        ids = []
-        for i in range(n):
-            bookcaseId = pb.loadURDF(model_path, pos, ori_quat,
-                                     useFixedBase=True,
-                                     physicsClientId=self.clientId)
-            ids.append(bookcaseId)
-        return ids
-
-    def move_bookcase(self, bookcaseId, pose2d, sp_layers=[0, 1, 2, 3]):
-        '''
-        Function which moves a bookcase to a new position and returns a list of
-        possible setpoint locations w.r.t. the new position.
-
-        Args:
-            bookcaseId (int): ID of bookcase.
-            pose2d (numpy.array): 2D pose to which bookcase should be moved to.
-            sp_layers (list): Selection specifying in what layers the setpoint
-                might be spawned. 0 means lowest and 3 top layer.
-        Returns:
-            list: 3D positions of possible setpoint locations w.r.t. pose2d.
-        '''
-        pos = [pose2d[0], pose2d[1], 0.0]
-        ori = [0.0, 0.0] + [pose2d[2]]
-        ori_quat = pb.getQuaternionFromEuler(ori)
-        pb.resetBasePositionAndOrientation(bookcaseId, pos, ori_quat,
-                                           self.clientId)
-
-        # Calculate possible setpoint positions
-        sp_pos = []
-        Rt = self.rotation_matrix(pose2d[2]).T
-        pos = np.array(pos)
-        for l in sp_layers:
-            z = 0.05 + 0.35*l
-            sp_pos.append(pos + Rt.dot(np.array([-0.15, 0.18, z])))
-            sp_pos.append(pos + Rt.dot(np.array([-0.15, -0.18, z])))
-
-        return sp_pos
-
     def close(self):
         '''
         Closes the environment.
         '''
         try:
             pb.disconnect(self.clientId)
-        except:
+        except Exception:
             pass
 
     def move_sp(self, pos):
@@ -524,7 +507,7 @@ class AslaugBaseEnv(gym.Env):
         dy_mag = 55.0
         yaw = self.last_yaw + 0.05*max(-dy_mag, min(dy_mag, yaw-self.last_yaw))
         self.last_yaw = yaw
-        rpy = [0, -45, yaw]
+        rpy = [0, -75, yaw]
         return cam_pos, rpy
 
     def calculate_success_rate(self):
@@ -541,3 +524,23 @@ class AslaugBaseEnv(gym.Env):
         pb.saveWorld(world_path, self.clientId)
         with open(sp_path, 'w') as f:
             json.dump(self.sp_history, f)
+
+    def numpyfy_dict(self, input):
+        if isinstance(input, list):
+            sol_n = not (False in [isinstance(x, (float, int)) for x in input])
+            sol_s = not (False in [isinstance(x, str) for x in input])
+            if sol_n:
+                return np.array(input)
+            elif sol_s:
+                return input
+            else:
+                for i in range(len(input)):
+                    input[i] = self.numpyfy_dict(input[i])
+                return input
+        if isinstance(input, dict):
+            for key in input:
+                input[key] = self.numpyfy_dict(input[key])
+
+            return input
+
+        return input
