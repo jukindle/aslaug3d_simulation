@@ -6,6 +6,9 @@ from importlib import import_module
 import argparse
 import numpy as np
 import os
+import json
+import shutil
+import inspect
 
 
 class EnvRunner:
@@ -22,26 +25,45 @@ class EnvRunner:
         self.deterministic = deterministic
         self.model_name = "aslaug_{}".format(version)
 
-        # Load environment
-        self.load_env()
-
         # Load model
         self.load_model()
+
+        # Load environment
+        self.load_env()
 
         # Prepare pretty-print
         np.set_printoptions(precision=2, suppress=True, sign=' ')
 
     def load_env(self):
         # Load module
-        #mod_path = "data.saved_models.{}.{}".format(folder, self.model_name)
-        mod_path = "envs.{}".format(self.model_name)
+        mod_path = "data.saved_models.{}.{}".format(folder, self.model_name)
+        # mod_path = "envs.{}".format(self.model_name)
+        mod_file_path = "data/saved_models/{}".format(folder)
+
+        base_path = mod_file_path + "/aslaug_base.py"
+        if not os.path.exists(base_path):
+            print("Deprecated saved model! Copying base...")
+            a = shutil.copy2("envs/aslaug_base.py", base_path)
+            print(a)
+
         aslaug2d_mod = import_module(mod_path)
 
+        param_path = mod_file_path + "/params.json"
+        params = None
+        if os.path.exists(param_path):
+            with open(param_path) as f:
+                params = json.load(f)["environment_params"]
         # Load env
         recording = record_video is not False
-        env = aslaug2d_mod.AslaugEnv(folder_name=self.folder, gui=self.gui,
-                                     free_cam=self.free_cam,
-                                     recording=recording)
+        if "params" in inspect.getargspec(aslaug2d_mod.AslaugEnv).args:
+            env = aslaug2d_mod.AslaugEnv(folder_name=self.folder, gui=self.gui,
+                                         free_cam=self.free_cam,
+                                         recording=recording,
+                                         params=params)
+        else:
+            env = aslaug2d_mod.AslaugEnv(folder_name=self.folder, gui=self.gui,
+                                         free_cam=self.free_cam,
+                                         recording=recording)
         if self.record_video:
             vid_n = "data/recordings/{}/{}".format(self.model_name,
                                                    self.record_video)
@@ -68,17 +90,21 @@ class EnvRunner:
 
     def run_n_episodes(self, n_episodes=1):
         self.n_success = 0
+        self.fps_queue = 400 * [0.02]
+        self.fps_NN_queue = 1000 * [0.02]
         for episode in range(n_episodes):
-            print("Running episode {}.".format(episode+1))
+            self.episode_id = episode + 1
             self.reset()
             self.done = False
             while not self.done:
                 ts = time.time()
                 self.step()
                 self.render()
-                dt = time.time()-ts
+                dt = time.time() - ts
                 if not self.no_sleep and 0.02 - dt > 0:
                     time.sleep(0.02 - dt)
+                self.fps_queue.pop(0)
+                self.fps_queue.append(dt)
 
             # Save world and setpoint history
             if self.record_video:
@@ -90,12 +116,16 @@ class EnvRunner:
         self.obs = self.env.reset()
         self.done = False
         self.cum_reward = 0.0
+        self.n_sp_tot = 0
         return self.obs
 
     def step(self, print_status=True):
+        ts_NN = time.time()
         self.action, _ = self.model.predict(self.obs,
                                             deterministic=self.deterministic)
-
+        te_NN = time.time()
+        self.fps_NN_queue.pop(0)
+        self.fps_NN_queue.append(te_NN - ts_NN)
         self.obs, self.reward, self.done, self.info = self.env.step(self.action)
         self.cum_reward += self.reward
         if print_status:
@@ -108,12 +138,17 @@ class EnvRunner:
                                 obs[sl[2]:sl[3]], obs[sl[3]:sl[4]],
                                 obs[sl[4]:sl[5]], obs[sl[5]:sl[6]])
                 succ_rate = self.env.calculate_success_rate()
+
             print("===============================\n",
                   "Observations\n{}\n\n".format(obs),
                   "Actions\n{}\n".format(self.action),
                   "Reward: {}\n".format(self.reward),
                   "Cum. reward: {}\n".format(self.cum_reward),
                   "Success rate: {}\n".format(succ_rate),
+                  "Episode: {}\n".format(self.episode_id),
+                  "Setpoint: {}\n".format(self.env.episode_counter),
+                  "FPS total: {}\n".format(len(self.fps_queue)/sum(self.fps_queue)),
+                  "FPS NN: {}\n".format(len(self.fps_NN_queue)/sum(self.fps_NN_queue)),
                   "===============================\n\n\n")
 
     def render(self):
@@ -198,7 +233,7 @@ class EnvComparer:
 parser = argparse.ArgumentParser()
 parser.add_argument("-v", "--version", help="Define version of env to use.")
 parser.add_argument("-f", "--folder", help="Specify folder to use.")
-parser.add_argument("-e", "--episode", help="Specify exact episode to use.")
+# parser.add_argument("-e", "--episode", help="Specify exact episode to use.")
 parser.add_argument("-r", "--record_video", help="Specify recording folder.")
 parser.add_argument("-n", "--n_episodes", help="Specify number of episodes.",
                     default="50")
@@ -211,8 +246,10 @@ parser.add_argument("-nogui", "--no_gui", help="Set camera free.", default="Fals
 args = parser.parse_args()
 
 version = args.version
-ep = args.episode
 folder = args.folder
+ep = None
+if folder is not None and len(folder.split(":")) > 1:
+    folder, ep = folder.split(":")
 folder_2 = args.folder_2
 record_video = args.record_video
 n_episodes = int(args.n_episodes)
@@ -225,9 +262,9 @@ if version is None:
     print("Please specify a version. Example: -v v8")
 
 if args.copy_from_remote in ['1', 'True', 'true']:
-
     os.system("rsync -rav -e ssh mapcompute:~/aslaug3d_simulation/data/saved_models/{} data/saved_models".format(folder))
-
+if args.copy_from_remote in ['2']:
+    os.system("rsync -rav -e ssh wgserver:~/aslaug3d_simulation/data/saved_models/{} data/saved_models".format(folder))
 
 if folder_2:
     er = EnvComparer(version, folder, folder_2, ep,
