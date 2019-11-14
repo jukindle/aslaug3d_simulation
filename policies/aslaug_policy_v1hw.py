@@ -37,43 +37,43 @@ class AslaugPolicy(ActorCriticPolicy):
 
         with tf.variable_scope("model/scan_block", reuse=reuse):
             s1_0 = tf.expand_dims(in_sc1, -1)
-            s1_1 = tf.layers.Conv1D(4, 11, activation=lrelu, name="s1_1")(s1_0)
+            s1_1 = tf.layers.Conv1D(6, 11, activation=lrelu, name="s1_1")(s1_0)
             s1_2 = tf.layers.MaxPooling1D(10, 10, name="s1_3")(s1_1)
             s1_3 = tf.layers.Conv1D(2, 5, activation=lrelu, name="s1_1")(s1_2)
             s1_4 = tf.layers.Flatten()(s1_3)
-            s1_5 = tf.layers.Dense(32, activation=lrelu, name="s1_6")(s1_4)
-            s1_out = tf.layers.Dense(16, activation=lrelu, name="s1_7")(s1_5)
+            s1_5 = tf.layers.Dense(64, activation=lrelu, name="s1_6")(s1_4)
+            s1_out = tf.layers.Dense(32, activation=lrelu, name="s1_7")(s1_5)
 
             s2_0 = tf.expand_dims(in_sc2, -1)
-            s2_1 = tf.layers.Conv1D(4, 11, activation=lrelu, name="s2_1")(s2_0)
+            s2_1 = tf.layers.Conv1D(6, 11, activation=lrelu, name="s2_1")(s2_0)
             s2_2 = tf.layers.MaxPooling1D(10, 10, name="s2_3")(s2_1)
             s2_3 = tf.layers.Conv1D(2, 5, activation=lrelu, name="s2_1")(s2_2)
             s2_4 = tf.layers.Flatten()(s2_3)
-            s2_5 = tf.layers.Dense(32, activation=lrelu, name="s2_6")(s2_4)
-            s2_out = tf.layers.Dense(16, activation=lrelu, name="s2_7")(s2_5)
+            s2_5 = tf.layers.Dense(64, activation=lrelu, name="s2_6")(s2_4)
+            s2_out = tf.layers.Dense(32, activation=lrelu, name="s2_7")(s2_5)
 
             sc_0 = tf.keras.layers.Concatenate(name="m_0")([s1_out, s2_out])
-            sc_out = tf.layers.Dense(16, activation=lrelu, name="sc_out")(sc_0)
+            sc_out = tf.layers.Dense(32, activation=lrelu, name="sc_out")(sc_0)
 
         with tf.variable_scope("model/attraction_block", reuse=reuse):
             at_0 = tf.keras.layers.Concatenate(name="mb_0")([in_sp, in_mb,
                                                              in_jv])
             at_1 = tf.layers.Dense(64, activation=lrelu, name="mb_s_0")(at_0)
-            at_2 = tf.layers.Dense(32, activation=lrelu, name="mb_s_1")(at_1)
+            at_2 = tf.layers.Dense(64, activation=lrelu, name="mb_s_1")(at_1)
             at_out = tf.layers.Dense(32, activation=lrelu, name="mb_1")(at_2)
 
         with tf.variable_scope("model/repulsion_block", reuse=reuse):
             rp_0 = tf.keras.layers.Concatenate(name="mb_0")([in_lp, sc_out,
                                                              in_jv, in_mb])
-            rp_1 = tf.layers.Dense(64, activation=lrelu, name="lp_s_0")(rp_0)
-            rp_2 = tf.layers.Dense(32, activation=lrelu, name="lps_1")(rp_1)
-            rp_out = tf.layers.Dense(32, activation=lrelu, name="lps_1")(rp_2)
+            rp_1 = tf.layers.Dense(128, activation=lrelu, name="lp_s_0")(rp_0)
+            rp_2 = tf.layers.Dense(64, activation=lrelu, name="lps_1")(rp_1)
+            rp_out = tf.layers.Dense(64, activation=lrelu, name="lps_1")(rp_2)
 
         with tf.variable_scope("model/combination_block", reuse=reuse):
             c_0 = tf.keras.layers.Concatenate(name="m_0")([at_out, rp_out,
                                                            in_jp])
-            c_1 = tf.layers.Dense(64, activation=lrelu, name="m_1")(c_0)
-            c_2 = tf.layers.Dense(32, activation=lrelu, name="m_1")(c_1)
+            c_1 = tf.layers.Dense(128, activation=lrelu, name="m_1")(c_0)
+            c_2 = tf.layers.Dense(64, activation=lrelu, name="m_1")(c_1)
             c_out = tf.layers.Dense(32, activation=lrelu, name="m_1")(c_2)
 
         with tf.variable_scope("model/actor_critic_block", reuse=reuse):
