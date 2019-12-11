@@ -195,16 +195,16 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         # Reset robot base
         pb.resetBaseVelocity(self.robotId, [0, 0, 0], [0, 0, 0], self.clientId)
 
-        x_coord = self.np_random.uniform(5.5, 20.5)
-        robot_pos = (x_coord, 1.5, 0.08)
-        robot_init_yaw = np.random.uniform(-np.pi, np.pi)
-        robot_ori = pb.getQuaternionFromEuler([np.pi / 2, 0, robot_init_yaw])
-        pb.resetBasePositionAndOrientation(self.robotId, robot_pos, robot_ori,
-                                           self.clientId)
-
         # Reset robot arm
         collides = True
         while collides:
+            x_coord = self.np_random.uniform(5.5, 20.5)
+            robot_pos = (x_coord, 1.5, 0.08)
+            robot_init_yaw = np.random.uniform(-np.pi, np.pi)
+            robot_ori = pb.getQuaternionFromEuler([np.pi / 2, 0, robot_init_yaw])
+            pb.resetBasePositionAndOrientation(self.robotId, robot_pos, robot_ori,
+                                               self.clientId)
+
             j0 = self.np_random.uniform(self.joint_limits[0, 0],
                                         self.joint_limits[0, 1])
             j3 = self.np_random.uniform(self.joint_limits[3, 0],

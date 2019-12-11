@@ -14,7 +14,7 @@ import inspect
 class EnvRunner:
     def __init__(self, version, episode=False, folder=False,
                  record_video=False, deterministic=False, free_cam=False,
-                 no_sleep=False, gui=True):
+                 no_sleep=False, gui=True, n_recurrent=0):
         self.free_cam = free_cam
         self.gui = gui
         self.no_sleep = no_sleep
@@ -24,7 +24,9 @@ class EnvRunner:
         self.folder = folder
         self.deterministic = deterministic
         self.model_name = "aslaug_{}".format(version)
-
+        self.n_recurrent = n_recurrent
+        self.obs_list = []
+        self.act_list = []
         # Load model
         self.load_model()
 
@@ -33,6 +35,10 @@ class EnvRunner:
 
         # Prepare pretty-print
         np.set_printoptions(precision=2, suppress=True, sign=' ')
+
+    def set_param(self, param_str):
+        param, val = param_str.split(":")
+        self.env.set_param(param, float(val))
 
     def load_env(self):
         # Load module
@@ -93,8 +99,14 @@ class EnvRunner:
         self.fps_queue = 400 * [0.02]
         self.fps_NN_queue = 1000 * [0.02]
         for episode in range(n_episodes):
+            self.act_list = []
+            self.obs_list = []
             self.episode_id = episode + 1
-            self.reset()
+            obs = self.reset()
+            if self.record_video:
+                self.obs_list.append(obs.tolist())
+            if self.n_recurrent > 0:
+                self.obs_hist = [obs]*self.n_recurrent
             self.done = False
             while not self.done:
                 ts = time.time()
@@ -102,14 +114,24 @@ class EnvRunner:
                 self.render()
                 dt = time.time() - ts
                 if not self.no_sleep and 0.02 - dt > 0:
-                    time.sleep(0.02 - dt)
+                    time.sleep(self.env.p["world"]["tau"] - dt)
                 self.fps_queue.pop(0)
                 self.fps_queue.append(dt)
 
             # Save world and setpoint history
             if self.record_video:
-                self.env.save_world(self.vid_n, self.env.file_prefix,
-                                    self.env.file_infix, self.env.episode_id)
+                prefix, infix = self.env.file_prefix, self.env.file_infix
+                ep_id = self.env.episode_id
+                self.env.save_world(self.vid_n, prefix, infix, ep_id)
+
+                fn = "{}.video.{}.video{:06}.obs_acts.json".format(prefix,
+                                                                   infix,
+                                                                   ep_id)
+                obs_act_path = os.path.join(self.vid_n, fn)
+                data = {"observations": self.obs_list,
+                        "actions": self.act_list}
+                with open(obs_act_path, 'w') as f:
+                    json.dump(data, f)
 
     def reset(self, init_state=None, init_setpoint_state=None,
               init_obstacle_grid=None, init_ol=None):
@@ -121,12 +143,23 @@ class EnvRunner:
 
     def step(self, print_status=True):
         ts_NN = time.time()
-        self.action, _ = self.model.predict(self.obs,
-                                            deterministic=self.deterministic)
+        if self.n_recurrent > 0:
+            self.action, _ = self.model.predict(np.array(self.obs_hist),
+                                                deterministic=self.deterministic)
+            self.action = self.action[-1, :]
+        else:
+            self.action, _ = self.model.predict(self.obs,
+                                                deterministic=self.deterministic)
         te_NN = time.time()
         self.fps_NN_queue.pop(0)
         self.fps_NN_queue.append(te_NN - ts_NN)
         self.obs, self.reward, self.done, self.info = self.env.step(self.action)
+        if self.record_video:
+            self.obs_list.append(self.obs.tolist())
+            self.act_list.append(self.action.tolist())
+        if self.n_recurrent > 0:
+            self.obs_hist.pop(0)
+            self.obs_hist.append(self.obs)
         self.cum_reward += self.reward
         if print_status:
             obs = self.obs
@@ -243,6 +276,9 @@ parser.add_argument("-det", "--deterministic", help="Set deterministic or probab
 parser.add_argument("-fcam", "--free_cam", help="Set camera free.", default="False")
 parser.add_argument("-nosleep", "--no_sleep", help="Set camera free.", default="False")
 parser.add_argument("-nogui", "--no_gui", help="Set camera free.", default="False")
+parser.add_argument("-p", "--param", action='append',
+                    help="Set a specific param a-priori. Example to adjust \
+                    parameter p[reward][1] to 12: -p reward.1:12")
 args = parser.parse_args()
 
 version = args.version
@@ -257,12 +293,14 @@ free_cam = True if args.free_cam in ["True", "true", "1"] else False
 deterministic = True if args.deterministic in ["True", "true", "1"] else False
 no_sleep = True if args.no_sleep in ["True", "true", "1"] else False
 no_gui = True if args.no_gui in ["True", "true", "1"] else False
-
+param = args.param
 if version is None:
     print("Please specify a version. Example: -v v8")
 
 if args.copy_from_remote in ['1', 'True', 'true']:
-    os.system("rsync -rav -e ssh mapcompute:~/aslaug3d_simulation/data/saved_models/{} data/saved_models".format(folder))
+    os.system("rsync -rav -e ssh --exclude '*.pkl' mapcompute:~/aslaug3d_simulation/data/saved_models/{} data/saved_models".format(folder))
+    os.system("rsync -rav -e ssh mapcompute:~/aslaug3d_simulation/data/saved_models/{}/aslaug_{}_{}.pkl data/saved_models/{}".format(folder, version, ep, folder))
+
 if args.copy_from_remote in ['2']:
     os.system("rsync -rav -e ssh wgserver:~/aslaug3d_simulation/data/saved_models/{} data/saved_models".format(folder))
 
@@ -272,6 +310,11 @@ if folder_2:
 else:
     er = EnvRunner(version, ep, folder, record_video, deterministic, free_cam,
                    no_sleep, not no_gui)
+
+# Prepare curriculum learning
+if param is not None:
+    for param_str in param:
+        er.set_param(param_str)
 
 
 print("=======================================\n",

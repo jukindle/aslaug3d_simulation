@@ -15,7 +15,7 @@
   <link name="base_link_center"/>
 
   <joint name="bottom_j" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0.0185"/>
+    <origin rpy="0 0 0" xyz="0 0 0.0185"/>
     <parent link="base_link_center"/>
     <child link="bottom"/>
   </joint>

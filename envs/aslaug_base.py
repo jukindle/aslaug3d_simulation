@@ -17,6 +17,7 @@ class AslaugBaseEnv(gym.Env):
         self.free_cam = free_cam
         self.version = version
         self.gui = gui
+        self.done_info = None
 
         if params is None:
             print("No env params specified, using default.")
@@ -24,10 +25,9 @@ class AslaugBaseEnv(gym.Env):
                 params_all = json.load(f)
             params = params_all["environment_params"]
         params = self.numpyfy_dict(params)
-        self.params = params
+        self.p = params
         self.viewer = None
 
-        self.p = self.params
         self.tau = self.p["world"]["tau"]
         self.metadata["video.frames_per_second"] = int(round(1.0/self.tau))
         self.seed(init_seed)
@@ -53,6 +53,7 @@ class AslaugBaseEnv(gym.Env):
         mb_vel_c_r = state_c["base_vel"]
         joint_vel_c = state_c["joint_vel"]
         # Obtain actions
+        self.action_d = action_d
         mb_actions = np.choose(action_d[:3], self.actions[:, :3])
         joint_actions = np.zeros(7)
         act_joint_actions = np.choose(action_d[3:], self.actions[:, 3:])
@@ -77,6 +78,10 @@ class AslaugBaseEnv(gym.Env):
 
         # Calculate reward
         reward, done, info = self.calculate_reward()
+        if done:
+            self.done_info = info
+        else:
+            self.done_info = None
 
         # Obtain observation
         obs = self.calculate_observation()
@@ -544,3 +549,36 @@ class AslaugBaseEnv(gym.Env):
             return input
 
         return input
+
+    def set_param(self, param, value):
+        key_list = param.split(".")
+        obj = self.p
+        for key in key_list[:-1]:
+            if isinstance(obj, (dict,)):
+                obj = obj[key]
+            elif isinstance(obj, (list,)):
+                obj = obj[int(key)]
+            else:
+                print("ERROR: curriculum learning has wrong param path.")
+                return False
+        if isinstance(obj, (dict,)):
+            obj[key_list[-1]] = value
+        elif isinstance(obj, (list, np.ndarray)):
+            obj[int(key_list[-1])] = value
+        else:
+            print("ERROR: curriculum learning has wrong param path.")
+            return False
+        return True
+
+    def get_param(self, param):
+        key_list = param.split(".")
+        obj = self.p
+        for key in key_list:
+            if isinstance(obj, (dict,)):
+                obj = obj[key]
+            elif isinstance(obj, (list,)):
+                obj = obj[int(key)]
+            else:
+                print("ERROR: curriculum learning has wrong param path.")
+                return False
+        return obj

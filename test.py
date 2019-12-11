@@ -1,11 +1,13 @@
-from envs.aslaug_v2 import AslaugEnv
 import time
+from envs.aslaug_v5 import AslaugEnv
 
 env = AslaugEnv(gui=True)
+env.reset()
 
-
-while True:
+for i in range(200):
     env.reset()
-    time.sleep(2.0)
-
-time.sleep(100)
+    time.sleep(0.5)
+# for i in range(1000):
+#     env.step(20*[3])
+#     time.sleep(0.02)
+time.sleep(15)

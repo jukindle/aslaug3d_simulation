@@ -35,7 +35,7 @@ def main():
                         default="None")
     parser.add_argument("-cl", "--curriculum_learning", action='append',
                         help="Enable curriculum learning. Example to adjust \
-                        parameter p1 from 1 to 5 in 3M steps: -cl p1:1:5:3e6.")
+                        parameter reward.r1 from 1 to 5 in 3M steps: -cl reward.r1:1:5:3e6.")
     parser.add_argument("-pt", "--proceed_training",
                         help="Specify model from which training shall be \
                         proceeded. Format: folder_name:episode")
@@ -104,10 +104,6 @@ def main():
     aslaug_mod = import_module("envs." + model_name)
     shutil.copy("envs/{}.py".format(model_name), dir_path + model_name + ".py")
 
-    if cl is not None:
-        for cl_entry in cl_list:
-            env.set_attr(cl_entry["param"], cl_entry["start"])
-
     with open("params.json") as f:
         params_all = json.load(f)
     learning_params = params_all["learning_params"]
@@ -120,6 +116,12 @@ def main():
     params_file = "data/saved_models/{}/params.json".format(folder_name)
     shutil.copy("params.json", params_file)
 
+    # Save curriculum learning to file
+    if cl is not None:
+        cl_file = "data/saved_models/{}/curriculum_learning.json".format(folder_name)
+        with open(cl_file, 'w') as outfile:
+            json.dump(cl_list, outfile)
+
     # Copy policy to models folder
     shutil.copy(policy_mod.__file__,
                 "data/saved_models/{}/{}.py".format(folder_name, policy_name))
@@ -131,10 +133,18 @@ def main():
         lr_params = learning_params["cliprange"]
         learning_params["cliprange"] = create_custom_lr(*lr_params)
 
+    cbh = CallbackHandler(env_params)
+
+    env_params["episode_end_callback"] = cbh.callback_episode_end
     create_gym = lambda: aslaug_mod.AslaugEnv(params=env_params)
     env = SubprocVecEnv([create_gym for i in range(n_cpu)])
     g_env = create_gym()
     obs_slicing = g_env.obs_slicing if hasattr(g_env, "obs_slicing") else None
+
+    # Prepare curriculum learning
+    # if cl is not None:
+    #     for cl_entry in cl_list:
+    #         env.set_param(cl_entry["param"], cl_entry["start"])
 
     if pt is None:
         model = PPO2(policy, env, verbose=0,
@@ -151,6 +161,7 @@ def main():
                           tensorboard_log=tb_log_path,
                           policy_kwargs={"obs_slicing": obs_slicing},
                           **learning_params)
+    cbh.set_model(model)
     # Prepare callback
     delta_steps = model.n_batch
 
@@ -177,7 +188,8 @@ def main():
                           * n_steps / cl_entry["steps"])
                 if cl_val >= min(cl_entry["start"], cl_entry["end"]) \
                         and cl_val <= max(cl_entry["start"], cl_entry["end"]):
-                    env.set_attr(cl_entry["param"], cl_val)
+                    model.env.env_method("set_param",
+                                         cl_entry["param"], cl_val)
                     print("Modifying param {} to {}".format(cl_entry["param"],
                                                             cl_val))
 
@@ -185,12 +197,76 @@ def main():
             info_idx += 1
             print("Current frame_rate: {} fps.".format(_locals["fps"]))
 
+
     # Start learning
     model.learn(total_timesteps=int(steps), callback=callback)
 
     # Save model
     model.save(dir_path + model_name + ".pkl")
 
+
+class EnvScore:
+    def __init__(self, batch_size=100):
+        self.batch_size = batch_size
+        self.reset()
+
+    def reset(self):
+        self.score_buffer = np.full(self.batch_size, np.nan)
+
+    def add(self, val):
+        self.score_buffer = np.roll(self.score_buffer, 1)
+        self.score_buffer[0] = val
+        return self.is_full()
+
+    def is_full(self):
+        return not np.isnan(self.score_buffer).any()
+
+    def get_avg_score(self):
+        nansum = np.nansum(self.score_buffer)
+        numnonnan = np.count_nonzero(~np.isnan(self.score_buffer))
+        return nansum / numnonnan
+
+
+class CallbackHandler:
+    def __init__(self, learning_params):
+        self.lp = learning_params
+        self.score = EnvScore(86)
+
+    def set_model(self, model):
+        self.model = model
+
+
+    def callback_episode_end(self, env_cb, cum_rew, success):
+        if success:
+            queue_full = self.score.add(1)
+        else:
+            queue_full = self.score.add(0)
+
+        if queue_full:
+            score = self.score.get_avg_score()
+
+            if score >= self.lp["adr"]["success_threshold"]:
+                d_sign = 1
+            elif score < self.lp["adr"]["fail_threshold"]:
+                d_sign = -1
+            else:
+                d_sign = 0
+            did_modification = False
+            if d_sign != 0:
+                for el in self.lp["adr"]["adaptions"]:
+                    param = el["param"]
+                    val_cur = env_cb.get_param(param)
+                    delta = (el["end"]-el["start"])/el["steps"]
+                    new_val = val_cur + delta * d_sign
+                    if el["start"] <= new_val <= el["end"] or \
+                            el["end"] <= new_val <= el["start"]:
+                        # env_cb.set_param(param, new_val)
+                        self.model.env.env_method("set_param",
+                                             param, new_val)
+                        did_modification = True
+                        print("Adapting {} to {}".format(param, new_val))
+            if did_modification:
+                score.reset()
 
 if __name__ == '__main__':
     main()

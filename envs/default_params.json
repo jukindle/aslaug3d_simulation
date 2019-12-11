@@ -11,9 +11,14 @@
     "noptepochs": 30
   },
   "environment_params": {
+    "replay_buffer": {
+      "prob_replay": 0.5,
+      "prob_forget": 0.1,
+      "length": 100
+    },
     "base": {
-      "acc_mag": [1.5, 0.0001, 0.7],
-      "vel_mag":[0.4, 0.0001, 1.0]
+      "acc_mag": [1.5, 1.5, 0.7],
+      "vel_mag":[0.4, 0.4, 1.0]
     },
     "joints": {
       "acc_mag": 0.75,
@@ -29,7 +34,7 @@
     "reward": {
       "fac_ang_vel": 0.0,
       "fac_goal_dis_ang": 0,
-      "fac_base_sp_ang": 5,
+      "fac_base_sp_ang": 0,
       "fac_goal_dis_lin": 25,
       "fac_sp_hold": 30,
       "fac_sp_hold_near": 10,
@@ -54,8 +59,22 @@
       "tol_lin_mag": 0.2
     },
     "world": {
+      "corridor_length": [14.0, 17.0],
+      "corridor_width": [2.75, 6.5],
+      "wall_length": [0.5, 7.5],
+      "wall_width": [0.05, 0.3],
+      "wall_height": [1.5, 1.51],
+      "door_length": [0.75, 1.5],
+      "shelf_length": [0.3, 1.75],
+      "shelf_height": [0.8, 1.25],
+      "shelf_width": [0.2, 0.65],
+      "shelf_gap": [-0.5, 5.5],
+      "prob_new_env": 0.15,
+
+
+
+      "spawn_range_x": 1.0,
       "action_discretization": 7,
-      "corridor_width": 4,
       "n_bookcases": 12,
       "size": 20,
       "tau": 0.02,
@@ -80,6 +99,15 @@
         {"file": "shelf9", "prob": 1, "pose2d": [13.719, 0, 0],
           "d_low": [0.0, -0.1, 0], "d_high": [1.0, 0.1, 0]}
       ]
+    },
+    "adr": {
+      "success_threshold": 0.85,
+      "fail_threshold": 0.45,
+      "batch_size": 25,
+      "adaptions": [
+        {"param": "world.spawn_range_x", "start": 1.0, "end": 15.0, "steps": 25}
+      ]
+
     }
   }
 }
