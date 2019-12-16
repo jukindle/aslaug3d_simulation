@@ -15,7 +15,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
     def __init__(self, folder_name="", gui=False, free_cam=False,
                  recording=False, params=None, randomized_env=True):
         # Common params
-        version = "v4"
+        version = "v5"
         self.folder_name = folder_name
         self.soft_reset = False
         self.recording = recording
@@ -175,15 +175,15 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                               j_pos, j_vel, scan))
         return obs
 
+    def get_success_rate(self):
+        return self.env_score.get_avg_score()
+
     def reset(self, init_state=None, init_setpoint_state=None,
               init_obstacle_grid=None, init_obstacle_locations=None):
 
-        if "episode_end_callback" in self.p:
-            if self.done_info is not None and \
-                    self.done_info["done_reason"] == "success":
-                self.p["episode_end_callback"](self, self.cum_rew, 1)
-            else:
-                self.p["episode_end_callback"](self, self.cum_rew, 0)
+        if self.done_info is not None:
+            success = self.done_info["done_reason"] == "success"
+            self.env_score.add(success)
             self.done_info = None
 
         # Reset internal parameters
