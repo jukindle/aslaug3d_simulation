@@ -1,13 +1,17 @@
 import time
-from envs.aslaug_v5 import AslaugEnv
+from envs.aslaug_v6 import AslaugEnv
 
+
+N = 100000
 env = AslaugEnv(gui=True)
 env.reset()
 
-for i in range(200):
-    env.reset()
-    time.sleep(0.5)
-# for i in range(1000):
-#     env.step(20*[3])
-#     time.sleep(0.02)
-time.sleep(15)
+ts = time.time()
+for i in range(N):
+    o,r,d,i = env.step(env.action_space.sample())
+    if d:
+        env.reset()
+te = time.time()
+print("Took {}s".format(te-ts))
+print("Runs at {}Hz".format(N/(te-ts)))
+print("Corresponds to RTF of {}".format(N/(te-ts)/50.0))
