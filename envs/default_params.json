@@ -5,12 +5,19 @@
     "ent_coef": 0.003760312514286235,
     "gamma": 0.99,
     "lam": 0.8,
-    "learning_rate": 0.0007974227066470103,
+    "learning_rate": [0.001, 0.00001, 0.995, 0.05],
     "n_steps": 2048,
     "nminibatches": 8,
     "noptepochs": 30
   },
   "environment_params": {
+    "discriminator": {
+      "port": 1609,
+      "reward_scaling": [-100, 100],
+      "buffer_length": 512,
+      "batch_size": 8,
+      "epochs": 20
+    },
     "replay_buffer": {
       "prob_replay": 0.5,
       "prob_forget": 0.1,
@@ -18,7 +25,13 @@
     },
     "base": {
       "acc_mag": [1.5, 1.5, 0.7],
-      "vel_mag":[0.4, 0.4, 1.0]
+      "vel_mag":[0.4, 0.4, 1.0],
+      "noise_acc": {
+        "mean_lin": 0.0,
+        "std_lin": 0.02,
+        "mean_ang": 0.0,
+        "std_ang": 0.01
+      }
     },
     "joints": {
       "acc_mag": 0.75,
@@ -29,7 +42,11 @@
       "link_mag": [0.33, 0.67, 0.75, 1.16, 1.28, 1.56],
       "link_names": ["panda_link1","panda_link3","panda_link4","panda_link5",
                      "panda_link7","grasp_loc"],
-      "vel_mag": 1
+      "vel_mag": 1,
+      "noise_acc": {
+        "mean": 0,
+        "std": 0.003
+      }
     },
     "reward": {
       "fac_ang_vel": 0.0,
@@ -49,7 +66,28 @@
         "link_id1": "front_laser",
         "link_id2": "rear_laser",
         "n_scans": 201,
-        "range": 5
+        "range": 5,
+        "noise": {
+          "mean": 0.0,
+          "std": 0.02,
+          "p_err": 0.025
+        }
+      },
+      "setpoint_meas": {
+        "noise": {
+          "mean_lin": 0.0,
+          "std_lin": 0.02,
+          "mean_ang": 0.0,
+          "std_ang": 0.01
+        }
+      },
+      "odometry": {
+        "noise": {
+          "mean_lin": 0.0,
+          "std_lin": 0.02,
+          "mean_ang": 0.0,
+          "std_ang": 0.01
+        }
       }
     },
     "setpoint": {
@@ -60,16 +98,17 @@
     },
     "world": {
       "corridor_length": [14.0, 17.0],
-      "corridor_width": [2.75, 6.5],
+      "corridor_width": [1.9, 5.5],
       "wall_length": [0.5, 7.5],
       "wall_width": [0.05, 0.3],
       "wall_height": [1.5, 1.51],
       "door_length": [0.75, 1.5],
       "shelf_length": [0.3, 1.75],
       "shelf_height": [0.8, 1.25],
-      "shelf_width": [0.2, 0.65],
+      "shelf_width": [0.05, 0.65],
       "shelf_gap": [-0.5, 5.5],
-      "prob_new_env": 0.15,
+      "prob_new_env": 0.2,
+      "prob_proceed": 0.25,
 
 
 
@@ -103,7 +142,7 @@
     "adr": {
       "success_threshold": 0.85,
       "fail_threshold": 0.45,
-      "batch_size": 25,
+      "batch_size": 3,
       "adaptions": [
         {"param": "world.spawn_range_x", "start": 1.0, "end": 15.0, "steps": 25}
       ]
