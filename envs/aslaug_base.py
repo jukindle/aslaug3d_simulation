@@ -59,6 +59,21 @@ class AslaugBaseEnv(gym.Env):
         act_joint_actions = np.choose(action_d[3:], self.actions[:, 3:])
         joint_actions[self.actuator_selection] = act_joint_actions
 
+        # Add noise to base accelerations
+        mean_lin = self.p["base"]["noise_acc"]["mean_lin"]
+        std_lin = self.p["base"]["noise_acc"]["std_lin"]
+        mean_ang = self.p["base"]["noise_acc"]["mean_ang"]
+        std_ang = self.p["base"]["noise_acc"]["std_ang"]
+        mb_noise_lin = self.np_random.normal(mean_lin, std_lin, 2)
+        mb_noise_ang = self.np_random.normal(mean_ang, std_ang, 1)
+        mb_actions[0:2] += self.p["world"]["tau"]*mb_noise_lin
+        mb_actions[2:3] += self.p["world"]["tau"]*mb_noise_ang
+
+        # Add noise to joint accelerations
+        mean = self.p["joints"]["noise_acc"]["mean"]
+        std = self.p["joints"]["noise_acc"]["std"]
+        joint_noise = self.np_random.normal(mean, std, joint_actions.shape)
+        joint_actions += self.p["world"]["tau"]*joint_noise
         # Calculate new velocities and clip limits
         mb_vel_n_r = np.clip(mb_vel_c_r + mb_actions,
                              -self.p["base"]["vel_mag"],
