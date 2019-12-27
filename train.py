@@ -68,6 +68,11 @@ def main():
         folder_name = model_name
 
     os.system("tmux rename-session {}-{}".format(version, folder_name))
+    os.system("tmux set -g status-left-length 50")
+    os.system("tmux set -g status-left \"{}: {}    \"".format(version, folder_name))
+    os.system("tmux set -g status-right \"\"")
+
+
 
     dir_path = "data/saved_models/{}/".format(folder_name)
     if not os.path.exists(dir_path):
@@ -176,6 +181,7 @@ def main():
 
     def callback(_locals, _globals):
         global n_steps, model_idx, cl_idx, env, info_idx, ADR_idx, spwnrng
+        n_cp_simple = 0
         n_steps += delta_steps
         if n_steps / float(n_cp) >= model_idx:
             n_cp_simple = millify(float(model_idx) * float(n_cp), precision=6)
@@ -205,6 +211,7 @@ def main():
         if n_steps / 5000.0 >= info_idx:
             info_idx += 1
             print("Current frame_rate: {} fps.".format(_locals["fps"]))
+            os.system("tmux set -g status-right \"Steps {} / {} | ADR {} | FPS {}\"".format(n_cp_simple, millify(float(steps), precision=6), spwnrng, _locals["fps"]))
 
         if n_steps / 25000.0 >= ADR_idx:
             ADR_idx += 1

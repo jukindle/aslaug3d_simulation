@@ -38,8 +38,11 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                    * np.concatenate((accel_lims_mb, acc_lim_joints)))
         lows_a = -highs_a
         n_d = self.p["world"]["action_discretization"]
-        self.action_space = spaces.MultiDiscrete(lows_a.shape[0] * [n_d])
-        self.actions = np.linspace(lows_a, highs_a, n_d)
+        if n_d > 0:
+            self.action_space = spaces.MultiDiscrete(lows_a.shape[0] * [n_d])
+            self.actions = np.linspace(lows_a, highs_a, n_d)
+        else:
+            self.action_space = spaces.Box(lows_a, highs_a)
 
         # Define observation space
         high_sp = np.array([self.p["world"]["size"]] * 2 + [1.5] + 3 * [np.pi])
@@ -94,6 +97,14 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
             info["done_reason"] = "collision"
             done = True
 
+        # Reward: Safety margin
+        scan_ret = self.get_lidar_scan()
+        scan = np.concatenate([x for x in scan_ret if x is not None])
+        min_val = np.min(scan)
+        start_dis = self.p["reward"]["dis_lidar"]
+        rew_lidar = self.p["reward"]["rew_lidar_p_s"]
+        if min_val <= start_dis:
+            reward += rew_lidar*self.p["world"]["tau"]*(1-min_val/start_dis)
         # Reward: Base-to-setpoint orientation
         r_ang_sp = self.calculate_base_sp_angle()
         reward += ((np.abs(self.last_r_ang_sp) - np.abs(r_ang_sp))
@@ -207,6 +218,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
             self.done_info = None
 
         # Reset internal parameters
+        self.valid_buffer_scan = False
         self.episode_counter += 1
         self.step_no = 0
         self.integrated_hold_reward = 0.0
@@ -257,18 +269,16 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
             robot_ori = pb.getQuaternionFromEuler([np.pi / 2, 0, robot_init_yaw])
             pb.resetBasePositionAndOrientation(self.robotId, robot_pos, robot_ori,
                                                self.clientId)
+            # Sample for all actuated joints
+            for i in range(len(self.actuator_selection)):
+                if self.actuator_selection[i]:
+                    j = self.np_random.uniform(self.joint_limits[i, 0],
+                                               self.joint_limits[i, 1])
+                    pb.resetJointState(self.robotId, self.joint_mapping[0],
+                                       j, 0.0, self.clientId)
 
-            j0 = self.np_random.uniform(self.joint_limits[0, 0],
-                                        self.joint_limits[0, 1])
-            j3 = self.np_random.uniform(self.joint_limits[3, 0],
-                                        self.joint_limits[3, 1])
-            pb.resetJointState(self.robotId, self.joint_mapping[0],
-                               j0,
-                               0.0, self.clientId)
-            pb.resetJointState(self.robotId, self.joint_mapping[3],
-                               j3,
-                               0.0, self.clientId)
             pb.stepSimulation(self.clientId)
+            self.valid_buffer_scan = False
             collides = self.check_collision()
 
         # Calculate observation and return

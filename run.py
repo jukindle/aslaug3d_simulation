@@ -165,6 +165,7 @@ class EnvRunner:
             obs = self.obs
             if hasattr(self.env, "obs_slicing"):
                 sl = self.env.obs_slicing
+                print("Obs slicing: {}".format(sl))
                 obs = ("Setpoint:\n{}\nMBvel:\n{}\nLinkpos:\n{}\n" +
                        "Jointpos:\n{}\nJointvel:\n{}\nScan:\n{}\n"
                        ).format(obs[sl[0]:sl[1]], obs[sl[1]:sl[2]],

@@ -43,8 +43,11 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                    * np.concatenate((accel_lims_mb, acc_lim_joints)))
         lows_a = -highs_a
         n_d = self.p["world"]["action_discretization"]
-        self.action_space = spaces.MultiDiscrete(lows_a.shape[0] * [n_d])
-        self.actions = np.linspace(lows_a, highs_a, n_d)
+        if n_d > 0:
+            self.action_space = spaces.MultiDiscrete(lows_a.shape[0] * [n_d])
+            self.actions = np.linspace(lows_a, highs_a, n_d)
+        else:
+            self.action_space = spaces.Box(lows_a, highs_a)
         # Define observation space
         # Overvation: [sp_pos_ee[6], mb_vel_r[3], link_pos[6*n_links+1],
         #              joint_pos[n_joints], joint_vel[n_joints],
@@ -209,6 +212,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
 
 
         # Reset internal parameters
+        self.valid_buffer_scan = False
         self.episode_counter += 1
         self.step_no = 0
         self.integrated_hold_reward = 0.0
@@ -262,6 +266,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                                j3,
                                0.0, self.clientId)
             pb.stepSimulation(self.clientId)
+            self.valid_buffer_scan = False
             collides = self.check_collision()
 
         # Calculate observation and return

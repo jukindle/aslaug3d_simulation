@@ -9,6 +9,7 @@ env.reset()
 ts = time.time()
 for i in range(N):
     o,r,d,i = env.step(env.action_space.sample())
+    print(env.joint_limits)
     if d:
         env.reset()
 te = time.time()

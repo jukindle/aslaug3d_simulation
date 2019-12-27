@@ -36,6 +36,7 @@ class AslaugBaseEnv(gym.Env):
         self.timeout_steps = (self.p["world"]["timeout"]
                               / self.p["world"]["tau"])
         self.step_no = 0
+        self.valid_buffer_scan = False
 
         # Set up simulation
         self.setup_simulation(gui=gui, easy_bookcases=easy_bookcases)
@@ -54,10 +55,15 @@ class AslaugBaseEnv(gym.Env):
         joint_vel_c = state_c["joint_vel"]
         # Obtain actions
         self.action_d = action_d
-        mb_actions = np.choose(action_d[:3], self.actions[:, :3])
+
         joint_actions = np.zeros(7)
-        act_joint_actions = np.choose(action_d[3:], self.actions[:, 3:])
-        joint_actions[self.actuator_selection] = act_joint_actions
+        if self.p["world"]["action_discretization"] > 0:
+            mb_actions = np.choose(action_d[:3], self.actions[:, :3])
+            act_joint_actions = np.choose(action_d[3:], self.actions[:, 3:])
+            joint_actions[self.actuator_selection] = act_joint_actions
+        else:
+            mb_actions = action_d[:3]
+            joint_actions[self.actuator_selection] = action_d[3:]
 
         # Add noise to base accelerations
         mean_lin = self.p["base"]["noise_acc"]["mean_lin"]
@@ -87,6 +93,7 @@ class AslaugBaseEnv(gym.Env):
 
         # Execute one step in simulation
         pb.stepSimulation(self.clientId)
+        self.valid_buffer_scan = False
 
         # Update internal state
         self.state = {"base_vel": mb_vel_n_r, "joint_vel": joint_vel_n}
@@ -389,6 +396,8 @@ class AslaugBaseEnv(gym.Env):
         return self.rotation_matrix(mb_ang_w).T.dot(mb_vel_w)
 
     def get_lidar_scan(self):
+        if self.valid_buffer_scan:
+            return self.last_scan
         '''
         Obtain lidar scan values for current state.
 
@@ -430,6 +439,8 @@ class AslaugBaseEnv(gym.Env):
 
             scan = [x[2]*self.p["sensors"]["lidar"]["range"] for x in scan_r]
             scan_rear = scan
+        self.last_scan = [scan_front, scan_rear]
+        self.valid_buffer_scan = True
         return [scan_front, scan_rear]
 
     def set_velocities(self, mb_vel_r, joint_vel):
@@ -466,8 +477,9 @@ class AslaugBaseEnv(gym.Env):
             bool: Any joint has reached its limit.
         '''
         j_pos, _ = self.get_joint_states()
-        max_reached = ((self.joint_limits[:, 1] - j_pos) <= 1e-3).any()
-        min_reached = ((j_pos - self.joint_limits[:, 0]) <= 1e-3).any()
+        filt = self.actuator_selection
+        max_reached = (filt*((self.joint_limits[:, 1] - j_pos) <= 1e-3)).any()
+        min_reached = (filt*((j_pos - self.joint_limits[:, 0]) <= 1e-3)).any()
 
         return min_reached or max_reached
 

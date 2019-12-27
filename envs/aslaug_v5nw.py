@@ -271,6 +271,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                                j3,
                                0.0, self.clientId)
             pb.stepSimulation(self.clientId)
+            self.valid_buffer_scan = False
             collides = self.check_collision()
 
         return self.calculate_observation()
