@@ -154,6 +154,7 @@ class EnvRunner:
         self.fps_NN_queue.pop(0)
         self.fps_NN_queue.append(te_NN - ts_NN)
         self.obs, self.reward, self.done, self.info = self.env.step(self.action)
+
         if self.record_video:
             self.obs_list.append(self.obs.tolist())
             self.act_list.append(self.action.tolist())
@@ -167,10 +168,12 @@ class EnvRunner:
                 sl = self.env.obs_slicing
                 print("Obs slicing: {}".format(sl))
                 obs = ("Setpoint:\n{}\nMBvel:\n{}\nLinkpos:\n{}\n" +
-                       "Jointpos:\n{}\nJointvel:\n{}\nScan:\n{}\n"
+                       "Jointpos:\n{}\nJointvel:\n{}\nScan_f:\n{}\n" +
+                       "Scan_r:\n{}\n"
                        ).format(obs[sl[0]:sl[1]], obs[sl[1]:sl[2]],
                                 obs[sl[2]:sl[3]], obs[sl[3]:sl[4]],
-                                obs[sl[4]:sl[5]], obs[sl[5]:sl[6]])
+                                obs[sl[4]:sl[5]], obs[sl[5]:sl[6]],
+                                obs[sl[6]:sl[7]])
                 succ_rate = self.env.calculate_success_rate()
 
             print("===============================\n",
