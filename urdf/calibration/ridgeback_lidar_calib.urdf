@@ -1,0 +1,118 @@
+<?xml version="1.0" ?>
+<robot name="floor_plane" static="true">
+
+  <material name="wood_color">
+    <color rgba="0.23 0.18 0.15 1.0"/>
+  </material>
+
+
+  <link name="base_link"/>
+
+
+  <joint name="left_j" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0.41 0"/>
+    <parent link="base_link"/>
+    <child link="left"/>
+  </joint>
+  <link name="left">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0.05 0.15"/>
+      <geometry>
+        <box size="2 0.1 0.3"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0.05 0.15"/>
+      <geometry>
+        <box size="2 0.1 0.3"/>
+      </geometry>
+      <material name="wood_color"/>
+    </visual>
+  </link>
+
+  <joint name="right_j" type="fixed">
+    <origin rpy="0 0 0" xyz="0 -0.41 0"/>
+    <parent link="base_link"/>
+    <child link="right"/>
+  </joint>
+  <link name="right">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 -0.05 0.15"/>
+      <geometry>
+        <box size="2 0.1 0.3"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 -0.05 0.15"/>
+      <geometry>
+        <box size="2 0.1 0.3"/>
+      </geometry>
+      <material name="wood_color"/>
+    </visual>
+  </link>
+
+  <joint name="front_j" type="fixed">
+    <origin rpy="0 0 0" xyz="0.5 0 0"/>
+    <parent link="base_link"/>
+    <child link="front"/>
+  </joint>
+  <link name="front">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0.5 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="0.05 0 0.15"/>
+      <geometry>
+        <box size="0.1 2 0.3"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="0.05 0 0.15"/>
+      <geometry>
+        <box size="0.1 2 0.3"/>
+      </geometry>
+      <material name="wood_color"/>
+    </visual>
+  </link>
+
+  <joint name="back_j" type="fixed">
+    <origin rpy="0 0 0" xyz="-0.52 0 0"/>
+    <parent link="base_link"/>
+    <child link="back"/>
+  </joint>
+  <link name="back">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0 0 0" xyz="0.466 0 0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.05 0 0.15"/>
+      <geometry>
+        <box size="0.1 2 0.3"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin rpy="0 0 0" xyz="-0.05 0 0.15"/>
+      <geometry>
+        <box size="0.1 2 0.3"/>
+      </geometry>
+      <material name="wood_color"/>
+    </visual>
+  </link>
+
+
+
+</robot>

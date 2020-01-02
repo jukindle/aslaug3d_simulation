@@ -31,6 +31,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
             self.set_param(param, el["start"])
 
     def setup_action_observation_spaces(self):
+        self.calibrate_lidar()
         # Define action space
         accel_lims_mb = self.p["base"]["acc_mag"]
         acc_lim_joints = (self.n_joints * [self.p["joints"]["acc_mag"]])
@@ -99,8 +100,9 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
 
         # Reward: Safety margin
         scan_ret = self.get_lidar_scan()
+        scan_cal = np.concatenate([x for x in self.scan_calib if x is not None])
         scan = np.concatenate([x for x in scan_ret if x is not None])
-        min_val = np.min(scan)
+        min_val = np.min(scan-scan_cal)
         start_dis = self.p["reward"]["dis_lidar"]
         rew_lidar = self.p["reward"]["rew_lidar_p_s"]
         if min_val <= start_dis:
@@ -113,8 +115,8 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         self.last_r_ang_sp = r_ang_sp
 
         # Reward: Timeout
-        reward += self.p["reward"]["rew_timeout"]/self.timeout_steps
         if self.step_no >= self.timeout_steps:
+            reward += self.p["reward"]["rew_timeout"]  # /self.timeout_steps
             info["done_reason"] = "timeout"
             done = True
 
@@ -274,7 +276,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                 if self.actuator_selection[i]:
                     j = self.np_random.uniform(self.joint_limits[i, 0],
                                                self.joint_limits[i, 1])
-                    pb.resetJointState(self.robotId, self.joint_mapping[0],
+                    pb.resetJointState(self.robotId, self.joint_mapping[i],
                                        j, 0.0, self.clientId)
 
             pb.stepSimulation(self.clientId)
@@ -315,12 +317,14 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
 
     def spawn_robot(self):
         # Spawn robot
-        robot_pos = [0, 0, 0.02]
+        robot_pos = [0, 0, 10]
         robot_ori = pb.getQuaternionFromEuler([0, 0, 0])
         model_path = 'urdf/robot/aslaug.urdf'
-        return pb.loadURDF(model_path, robot_pos, robot_ori,
-                           useFixedBase=True,
-                           physicsClientId=self.clientId)
+        robot_id = pb.loadURDF(model_path, robot_pos, robot_ori,
+                               useFixedBase=True,
+                               physicsClientId=self.clientId)
+
+        return robot_id
 
     def spawn_setpoint(self):
         # Spawn setpoint
@@ -498,15 +502,32 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                 pb.removeBody(id, physicsClientId=self.clientId)
             self.additionalIds = self.spawn_additional_objects()
         # Randomize bookcases
+        layers = self.p["setpoint"]["layers"]
         possible_sp_pos = []
         pos = [1.47 / 2 + 4, 0, 0]
         possible_sp_pos += self.move_bookcase(self.bookcaseIds[0], pos,
-                                              sp_layers=[1])
+                                              sp_layers=layers)
         pos = [1.47 / 2 + 12, 0, 0]
         possible_sp_pos += self.move_bookcase(self.bookcaseIds[1], pos,
-                                              sp_layers=[1])
+                                              sp_layers=layers)
 
         return possible_sp_pos
+
+    def calibrate_lidar(self):
+        robot_pos = [0, 0, 10]
+        robot_ori = pb.getQuaternionFromEuler([0, 0, 0])
+        model_path = 'urdf/calibration/ridgeback_lidar_calib.urdf'
+        calib_id = pb.loadURDF(model_path, robot_pos, robot_ori,
+                               useFixedBase=True,
+                               physicsClientId=self.clientId)
+        robot_pos = (0, 0, 10)
+        robot_ori = pb.getQuaternionFromEuler([np.pi/2, 0, np.pi/2])
+        pb.resetBasePositionAndOrientation(self.robotId, robot_pos, robot_ori,
+                                           self.clientId)
+        pb.stepSimulation(self.clientId)
+        scan_ret = self.get_lidar_scan()
+        self.scan_calib = scan_ret
+        pb.removeBody(calib_id, self.clientId)
 
 
 class EnvScore:
