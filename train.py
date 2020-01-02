@@ -228,8 +228,10 @@ def main():
                 model.env.env_method("set_param", "world.spawn_range_x"
                                      , spwnrng)
 
-
-
+    # Print number of trainable weights
+    n_els = np.sum([x.shape.num_elements()*x.trainable
+                    for x in model.get_parameter_list()])
+    print("Number of trainable weights: {}".format(n_els))
     # Start learning
     model.learn(total_timesteps=int(steps), callback=callback)
 
