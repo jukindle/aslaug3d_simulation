@@ -34,15 +34,15 @@
       }
     },
     "joints": {
-      "acc_mag": 0.75,
+      "acc_mag": 0.4,
       "base_link_name": "panda_link0",
       "ee_link_name": "grasp_loc",
       "init_states": [3.141592, 1.5708, 1.5708, 0, -1.5708, 3.14159, 0.7854],
-      "joint_names": [],
+      "joint_names": ["panda_joint1", "panda_joint2", "panda_joint3", "panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"],
       "link_mag": [0.33, 0.67, 0.75, 1.16, 1.28, 1.56],
       "link_names": ["panda_link1","panda_link3","panda_link4","panda_link5",
                      "panda_link7","grasp_loc"],
-      "vel_mag": 1,
+      "vel_mag": 0.5,
       "noise_acc": {
         "mean": 0,
         "std": 0.003
@@ -96,7 +96,8 @@
       "continious_mode": true,
       "hold_time": 2,
       "tol_ang_mag": 3.14159,
-      "tol_lin_mag": 0.35
+      "tol_lin_mag": 0.2,
+      "layers": [0, 1, 2, 3]
     },
     "world": {
       "corridor_length": [14.0, 17.0],
