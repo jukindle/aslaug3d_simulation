@@ -1,15 +1,18 @@
 import time
-from envs.aslaug_v6 import AslaugEnv
+from envs.aslaug_v12 import AslaugEnv
 
 
 N = 100000
 env = AslaugEnv(gui=True)
 env.reset()
-
 ts = time.time()
 for i in range(N):
-    o,r,d,i = env.step(env.action_space.sample())
-    print(env.joint_limits)
+    a = env.action_space.sample()
+    a = a * 0 + 3
+    a[3] = 2
+    o,r,d,i = env.step(a)
+    time.sleep(0.025)
+    # print(env.joint_limits)
     if d:
         env.reset()
 te = time.time()
