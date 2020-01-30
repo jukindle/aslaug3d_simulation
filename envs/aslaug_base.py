@@ -21,13 +21,14 @@ class AslaugBaseEnv(gym.Env):
 
         if params is None:
             print("No env params specified, using default.")
-            with open("envs/default_params.json") as f:
+            with open("params.json") as f:
                 params_all = json.load(f)
             params = params_all["environment_params"]
         params = self.numpyfy_dict(params)
         self.p = params
         self.viewer = None
 
+        self.fixed_joint_states = self.p["joints"]["init_states"]
         self.tau = self.p["world"]["tau"]
         self.metadata["video.frames_per_second"] = int(round(1.0/self.tau))
         self.seed(init_seed)
@@ -63,23 +64,34 @@ class AslaugBaseEnv(gym.Env):
             joint_actions[self.actuator_selection] = act_joint_actions
         else:
             mb_actions = action_d[:3]
-            joint_actions[self.actuator_selection] = action_d[3:]
+            lim_up = self.n_joints + 3
+            joint_actions[self.actuator_selection] = action_d[3:lim_up]
+            if self.p["world"]["use_stop_action"]:
+                stop_base = action_d[lim_up] > 0.5
+                stop_arm = action_d[lim_up+1] > 0.5
+                if stop_base:
+                    mb_actions[:3] = np.clip(-mb_vel_c_r,
+                                             self.action_space.low[:3],
+                                             self.action_space.high[:3])
+                if stop_arm:
+                    joint_actions[self.actuator_selection] = (
+                            np.clip(-joint_vel_c[self.actuator_selection],
+                                    self.action_space.low[3:lim_up],
+                                    self.action_space.high[3:lim_up])
+                            )
 
         # Add noise to base accelerations
-        mean_lin = self.p["base"]["noise_acc"]["mean_lin"]
-        std_lin = self.p["base"]["noise_acc"]["std_lin"]
-        mean_ang = self.p["base"]["noise_acc"]["mean_ang"]
-        std_ang = self.p["base"]["noise_acc"]["std_ang"]
-        mb_noise_lin = self.np_random.normal(mean_lin, std_lin, 2)
-        mb_noise_ang = self.np_random.normal(mean_ang, std_ang, 1)
-        mb_actions[0:2] += self.p["world"]["tau"]*mb_noise_lin
-        mb_actions[2:3] += self.p["world"]["tau"]*mb_noise_ang
+        std_lin = self.p["base"]["std_acc_lin"]
+        std_ang = self.p["base"]["std_acc_ang"]
+        mb_noise_fac_lin = self.np_random.normal(1, std_lin, 2)
+        mb_noise_fac_ang = self.np_random.normal(1, std_ang, 1)
+        mb_actions[0:2] *= mb_noise_fac_lin
+        mb_actions[2:3] *= mb_noise_fac_ang
 
         # Add noise to joint accelerations
-        mean = self.p["joints"]["noise_acc"]["mean"]
-        std = self.p["joints"]["noise_acc"]["std"]
-        joint_noise = self.np_random.normal(mean, std, joint_actions.shape)
-        joint_actions += self.p["world"]["tau"]*joint_noise
+        j_std = self.p["joints"]["std_acc"]
+        joint_noise_fac = self.np_random.normal(1, j_std, joint_actions.shape)
+        joint_actions *= joint_noise_fac
         # Calculate new velocities and clip limits
         mb_vel_n_r = np.clip(mb_vel_c_r + mb_actions,
                              -self.p["base"]["vel_mag"],
@@ -90,6 +102,13 @@ class AslaugBaseEnv(gym.Env):
 
         # Apply new velocity commands to robot
         self.set_velocities(mb_vel_n_r, joint_vel_n)
+
+        # Ensure that fixed joints do not move at all
+        for i in range(len(self.actuator_selection)):
+            if not self.actuator_selection[i]:
+                pb.resetJointState(self.robotId, self.joint_mapping[i],
+                                   self.fixed_joint_states[i], 0.0,
+                                   self.clientId)
 
         # Execute one step in simulation
         pb.stepSimulation(self.clientId)
@@ -157,7 +176,7 @@ class AslaugBaseEnv(gym.Env):
         # elif mode == 'human':
         #     assert self.gui, "Must use GUI for render mode human!"
 
-    def setup_simulation(self, gui=False, easy_bookcases=False):
+    def setup_simulation(self, gui=False, easy_bookcases=False, clientId=None):
         '''
         Initializes the simulation by setting up the environment and spawning
         all objects used later.
@@ -166,8 +185,11 @@ class AslaugBaseEnv(gym.Env):
             gui (bool): Specifies if a GUI should be spawned.
         '''
         # Setup simulation parameters
-        mode = pb.GUI if gui else pb.DIRECT
-        self.clientId = pb.connect(mode)
+        if clientId is None:
+            mode = pb.GUI if gui else pb.DIRECT
+            self.clientId = pb.connect(mode)
+        else:
+            self.clientId = clientId
         pb.setGravity(0.0, 0.0, 0.0, self.clientId)
         pb.setPhysicsEngineParameter(fixedTimeStep=self.p["world"]["tau"],
                                      physicsClientId=self.clientId)
@@ -188,9 +210,9 @@ class AslaugBaseEnv(gym.Env):
         self.additionalIds = self.spawn_additional_objects()
 
         # Enable collision of base and all objects
-        for id in self.additionalIds:
-            pb.setCollisionFilterPair(self.robotId, id, -1, -1, True,
-                                      self.clientId)
+        # for id in self.additionalIds:
+        #     pb.setCollisionFilterPair(self.robotId, id, -1, -1, True,
+        #                               self.clientId)
 
         # Spawn bookcases
         self.spawn_bookcases(self.p["world"]["n_bookcases"],
@@ -513,11 +535,15 @@ class AslaugBaseEnv(gym.Env):
         pos_sp = list(pos)
         pos_mk = list(pos)
         pos_mk[2] = 1.6
-        ori_quat = pb.getQuaternionFromEuler([0, 0, 0])
+        ang_noise = 0.4
+        ang = -1.5708 + self.np_random.uniform(-ang_noise, ang_noise)
+        ori_quat = pb.getQuaternionFromEuler([0, 0, ang])
         pb.resetBasePositionAndOrientation(self.spId, pos_sp, ori_quat,
                                            self.clientId)
         pb.resetBasePositionAndOrientation(self.markerId, pos_mk, ori_quat,
                                            self.clientId)
+        pb.stepSimulation(self.clientId)
+        self.valid_buffer_scan = False
 
     def get_camera_pose(self):
         state_mb = pb.getLinkState(self.robotId, self.baseLinkId,
