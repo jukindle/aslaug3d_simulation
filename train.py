@@ -8,6 +8,7 @@ import argparse
 import os
 import shutil
 import json
+from util.tb_logging import Logger
 
 # Prepare callback global parameters
 n_steps = 0
@@ -16,6 +17,8 @@ cl_idx = 0
 info_idx = 0
 ADR_idx = 1
 spwnrng = 1.5
+last_adr_idx = 0
+logger = None
 
 
 def main():
@@ -148,6 +151,8 @@ def main():
     env = SubprocVecEnv([create_gym for i in range(n_cpu)])
     g_env = create_gym()
     obs_slicing = g_env.obs_slicing if hasattr(g_env, "obs_slicing") else None
+    lidar_calib = np.array(g_env.get_lidar_calibration())
+    np.save("data/saved_models/{}/lidar_calib.npy".format(folder_name), lidar_calib)
 
     if use_dis:
         import threading
@@ -160,6 +165,7 @@ def main():
     # if cl is not None:
     #     for cl_entry in cl_list:
     #         env.set_param(cl_entry["param"], cl_entry["start"])
+
 
     if pt is None:
         model = PPO2(policy, env, verbose=0,
@@ -180,9 +186,17 @@ def main():
     delta_steps = model.n_batch
 
     def callback(_locals, _globals):
-        global n_steps, model_idx, cl_idx, env, info_idx, ADR_idx, spwnrng
+        global n_steps, model_idx, cl_idx, env, info_idx, ADR_idx, spwnrng, last_adr_idx, logger
         n_cp_simple = 0
         n_steps += delta_steps
+        if logger is None:
+            ppo_id = 1
+            ppo_path = 'data/tb_logs/{}/PPO2_{}'.format(folder_name, ppo_id+1)
+            while os.path.exists(ppo_path):
+                ppo_id += 1
+                ppo_path = 'data/tb_logs/{}/PPO2_{}'.format(folder_name, ppo_id+1)
+            ppo_path = 'data/tb_logs/{}/PPO2_{}/addons'.format(folder_name, ppo_id)
+            logger = Logger(ppo_path)
         if n_steps / float(n_cp) >= model_idx:
             n_cp_simple = millify(float(model_idx) * float(n_cp), precision=6)
             suffix = "_{}.pkl".format(n_cp_simple)
@@ -211,22 +225,34 @@ def main():
         if n_steps / 5000.0 >= info_idx:
             info_idx += 1
             print("Current frame_rate: {} fps.".format(_locals["fps"]))
-            os.system("tmux set -g status-right \"Steps {} / {} | ADR {} | FPS {}\"".format(n_cp_simple, millify(float(steps), precision=6), spwnrng, _locals["fps"]))
+            logger.log_scalar('metrics/success_rate', np.average(model.env.env_method("get_success_rate")), n_steps)
 
-        if n_steps / 25000.0 >= ADR_idx:
+            # os.system("tmux set -g status-right \"Steps {} / {} | ADR {} | FPS {}\"".format(n_cp_simple, millify(float(steps), precision=6), spwnrng, _locals["fps"]))
+
+        if n_steps / 25000.0 >= ADR_idx and len(env_params['adr']['adaptions']) > 0:
             ADR_idx += 1
             avg = np.average(model.env.env_method("get_success_rate"))
             print("Average success rate: {}".format(avg))
-            if avg >= 0.75:
-                spwnrng = min(spwnrng+0.5, 10.0)
-                print("Setting spawnrange to {}(+)".format(spwnrng))
-                model.env.env_method("set_param", "world.spawn_range_x"
-                                     , spwnrng)
-            if avg <= 0.25:
-                spwnrng = max(spwnrng-0.5, 1.5)
-                print("Setting spawnrange to {}(-)".format(spwnrng))
-                model.env.env_method("set_param", "world.spawn_range_x"
-                                     , spwnrng)
+            for adaption in env_params['adr']['adaptions']:
+                val = np.average(model.env.env_method("get_param", adaption['param']))
+                logger.log_scalar('ADR/{}'.format(adaption['param']), val, n_steps)
+            if avg >= env_params['adr']['success_threshold']:
+                last_adr_idx = np.random.randint(len(env_params['adr']['adaptions']))
+                lp = env_params['adr']['adaptions'][last_adr_idx]
+                val = np.average(model.env.env_method("get_param", lp['param']))
+                dval = +(lp['end']-lp['start'])/lp['steps']
+                val = max(min(lp['end'], lp['start']), min(max(lp['end'], lp['start']), val + dval))
+                print("Setting {} to {}(+)".format(lp['param'], val))
+                model.env.env_method("set_param", lp['param']
+                                     , val)
+            if avg <= env_params['adr']['fail_threshold']:
+                lp = env_params['adr']['adaptions'][last_adr_idx]
+                val = np.average(model.env.env_method("get_param", lp['param']))
+                dval = -(lp['end']-lp['start'])/lp['steps']
+                val = max(min(lp['end'], lp['start']), min(max(lp['end'], lp['start']), val + dval))
+                print("Setting {} to {}(-)".format(lp['param'], val))
+                model.env.env_method("set_param", lp['param']
+                                     , val)
 
     # Print number of trainable weights
     n_els = np.sum([x.shape.num_elements()*x.trainable
