@@ -166,7 +166,7 @@ class EnvRunner:
             obs = self.obs
             if hasattr(self.env, "obs_slicing"):
                 sl = self.env.obs_slicing
-                print("Obs slicing: {}".format(sl))
+                # print("Obs slicing: {}".format(sl))
                 obs = ("Setpoint:\n{}\nMBvel:\n{}\nLinkpos:\n{}\n" +
                        "Jointpos:\n{}\nJointvel:\n{}\nScan_f:\n{}\n" +
                        "Scan_r:\n{}\n"
@@ -186,6 +186,7 @@ class EnvRunner:
                   "Setpoint: {}\n".format(self.env.episode_counter),
                   "FPS total: {}\n".format(len(self.fps_queue)/sum(self.fps_queue)),
                   "FPS NN: {}\n".format(len(self.fps_NN_queue)/sum(self.fps_NN_queue)),
+                  "\n\nGoal distance: {}\n".format(self.env.last_eucl_dis),
                   "===============================\n\n\n")
 
     def render(self):
