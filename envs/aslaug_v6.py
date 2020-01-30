@@ -40,9 +40,13 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         lows_a = -highs_a
         n_d = self.p["world"]["action_discretization"]
         if n_d > 0:
-            self.action_space = spaces.MultiDiscrete(lows_a.shape[0] * [n_d])
+            n_da = n_d + self.p["world"]["use_stop_action"]
+            self.action_space = spaces.MultiDiscrete(lows_a.shape[0] * [n_da])
             self.actions = np.linspace(lows_a, highs_a, n_d)
         else:
+            if self.p["world"]["use_stop_action"]:
+                lows_a = np.append(lows_a, [0, 0])
+                highs_a = np.append(highs_a, [1, 1])
             self.action_space = spaces.Box(lows_a, highs_a)
 
         # Define observation space
@@ -268,9 +272,10 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
 
             robot_pos = (x_coord, self.corridor_width/2, 0.08)
             robot_init_yaw = self.np_random.uniform(-np.pi, np.pi)
-            robot_ori = pb.getQuaternionFromEuler([np.pi / 2, 0, robot_init_yaw])
-            pb.resetBasePositionAndOrientation(self.robotId, robot_pos, robot_ori,
-                                               self.clientId)
+            robot_ori = pb.getQuaternionFromEuler([np.pi / 2, 0,
+                                                   robot_init_yaw])
+            pb.resetBasePositionAndOrientation(self.robotId, robot_pos,
+                                               robot_ori, self.clientId)
             # Sample for all actuated joints
             for i in range(len(self.actuator_selection)):
                 if self.actuator_selection[i]:
@@ -282,6 +287,9 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
             pb.stepSimulation(self.clientId)
             self.valid_buffer_scan = False
             collides = self.check_collision()
+
+        # Reset setpoint variables
+        self.reset_setpoint_normalization()
 
         # Calculate observation and return
         obs = self.calculate_observation()
@@ -304,16 +312,29 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                     self.move_sp(sp_pos)
                     eucl_dis, eucl_ang = self.calculate_goal_distance()
 
-        self.last_eucl_dis, self.last_eucl_ang = eucl_dis, eucl_ang
-        self.scl_eucl_dis = 1 / self.last_eucl_dis
-        self.scl_eucl_ang = 1 / self.last_eucl_ang
-        self.last_r_ang_sp = self.calculate_base_sp_angle()
-        self.scl_r_ang_sp = 1 / self.last_r_ang_sp
-        self.sp_hold_time = 0.0
+        self.reset_setpoint_normalization()
 
         self.soft_reset = False
         self.sp_history.append(sp_pos.tolist())
         return sp_pos
+
+    def reset_setpoint_normalization(self):
+        eucl_dis, eucl_ang = self.calculate_goal_distance()
+        self.last_eucl_dis, self.last_eucl_ang = eucl_dis, eucl_ang
+        if eucl_dis == 0:
+            self.scl_eucl_dis = 0
+        else:
+            self.scl_eucl_dis = 1 / (self.last_eucl_dis+1e-9)
+        if eucl_ang == 0:
+            self.scl_eucl_ang = 0
+        else:
+            self.scl_eucl_ang = 1 / (self.last_eucl_ang+1e-9)
+        self.last_r_ang_sp = self.calculate_base_sp_angle()
+        if self.last_r_ang_sp == 0:
+            self.scl_r_ang_sp = 0
+        else:
+            self.scl_r_ang_sp = 1 / self.last_r_ang_sp
+        self.sp_hold_time = 0.0
 
     def spawn_robot(self):
         # Spawn robot
@@ -433,7 +454,11 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
 
     def calculate_goal_distance(self):
         sp_pose_ee = self.get_ee_sp_transform()
-        eucl_dis = np.linalg.norm(sp_pose_ee[1:3])  # Ignore x coord
+        # Ignore x coord. if 2D locked
+        if self.p['setpoint']['2D_locked']:
+            eucl_dis = np.linalg.norm(sp_pose_ee[1:3])
+        else:
+            eucl_dis = np.linalg.norm(sp_pose_ee[0:3])
         eucl_ang = np.linalg.norm(sp_pose_ee[3:6])
         return eucl_dis, eucl_ang
 
@@ -483,15 +508,20 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         '''
         pos, Rt = self.move_object(bookcaseId, pose2d)
 
-        # Calculate possible setpoint positions
+        # Sample possible setpoint positions
         sp_pos = []
+        p_noise = self.p['setpoint']['noise']
         for l in sp_layers:
             z = 0.037 + (0.33 + 0.025) * l
             y = 0.195 + 0.15
-            sp_pos.append(pos + Rt.dot(np.array([+0.1775, y, z])))
-            sp_pos.append(pos + Rt.dot(np.array([-0.1775, y, z])))
-            sp_pos.append(pos + Rt.dot(np.array([+0.5325, y, z])))
-            sp_pos.append(pos + Rt.dot(np.array([-0.5325, y, z])))
+            for dx in [+0.1775, -0.1775, +0.5325, -0.5325]:
+                pos_i = pos + Rt.dot(np.array([dx, y, z]))
+                nx = self.np_random.uniform(*p_noise['range_x'])
+                ny = self.np_random.uniform(*p_noise['range_y'])
+                nz = self.np_random.uniform(*p_noise['range_z'])
+
+                pos_i += np.array((nx, ny, nz))
+                sp_pos.append(pos_i)
 
         return sp_pos
 
@@ -549,4 +579,5 @@ class EnvScore:
     def get_avg_score(self):
         nansum = np.nansum(self.score_buffer)
         numnonnan = np.count_nonzero(~np.isnan(self.score_buffer))
-        return nansum / numnonnan
+        resp = nansum / numnonnan
+        return 0 if np.isnan(resp) else resp
