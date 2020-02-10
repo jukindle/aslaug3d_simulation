@@ -17,9 +17,9 @@ def get_model_fps(model_path, secs):
     model.predict(obs, deterministic=True)
 
     i = 0
+    obs = model.observation_space.sample()
     ts = time.time()
     while time.time() < ts + secs:
-        obs = model.observation_space.sample()
         model.predict(obs, deterministic=True)
         i += 1
     return i/secs
