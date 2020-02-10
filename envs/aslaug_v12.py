@@ -5,16 +5,17 @@ import random
 from . import aslaug_base
 import cv2
 from scipy.signal import convolve2d
-import time
 
 
-# Aslaug environment with automatic domain randomization and sensor noise.
+# Aslaug environment with automatic domain randomization, sensor noise,
+# harmonic potential field path, fast HPT, adapted maximum velocity of base
+# and improved GUI
 class AslaugEnv(aslaug_base.AslaugBaseEnv):
 
     def __init__(self, folder_name="", gui=False, free_cam=False,
                  recording=False, params=None, randomized_env=True):
         # Common params
-        version = "v10"
+        version = "v12"
         self.folder_name = folder_name
         self.soft_reset = False
         self.recording = recording
@@ -34,11 +35,15 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         super().__init__(version, params, gui=gui, init_seed=None,
                          free_cam=free_cam)
 
+        # Adjust joint limit of joint 4 to avoid self collision in 2D config
+        self.joint_limits[3, 0] = -2.7
+
         # Initialize score counter for ADR and adaption variables
         self.env_score = EnvScore(self.p["adr"]["batch_size"])
-        for el in self.p["adr"]["adaptions"]:
-            param = el["param"]
-            self.set_param(param, el["start"])
+        for ele in self.p["adr"]["adaptions"][::-1]:
+            for el in ele:
+                param = el["param"]
+                self.set_param(param, el["start"])
 
     def setup_action_observation_spaces(self):
         self.calibrate_lidar()
@@ -62,7 +67,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         # Define observation space
         high_sp = np.array([self.p["world"]["size"]] * 2 + [np.pi])
         low_sp = -high_sp
-        high_mb = np.array(self.p["base"]["vel_mag"])
+        high_mb = np.array([self.p['base']["vel_mag_lin"]]*2 + [self.p['base']['vel_mag_ang']])
         low_mb = -high_mb
         high_lp = []
         low_lp = []
@@ -183,7 +188,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                 reward += self.p["reward"]["rew_goal_reached"]
 
             self.sp_hold_time += self.tau
-            dis_f = 1.0 - eucl_dis / self.p["setpoint"]["tol_lin_mag"]
+            dis_f = (1.0 - eucl_dis / self.p["setpoint"]["tol_lin_mag"])**2
             rew_hold = (self.tau * self.p["reward"]["fac_sp_hold"]
                         + self.tau
                         * self.p["reward"]["fac_sp_hold_near"] * dis_f)
@@ -578,8 +583,9 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
             visBoxId = pb.createCollisionShape(pb.GEOM_BOX,
                                                halfExtents=halfExtents)
             pos_i = pos + np.array(halfExtents*np.array((1, 1, 1)))
-            if abs(pos_i[0] - 4.735) >= 0.735 + halfExtents[0] and \
-                    abs(pos_i[0] - 12.735) >= 0.735 + halfExtents[0]:
+            margin = 0.3
+            if abs(pos_i[0] - 4.735) >= 0.735 + halfExtents[0] + margin and \
+                    abs(pos_i[0] - 12.735) >= 0.735 + halfExtents[0] + margin:
                 sg.add_shelf(pos[0]+shlf_l_i/2, shlf_l_i, shlf_w_i, 0)
                 id = pb.createMultiBody(0, colBoxId, visBoxId, pos_i)
                 ids.append(id)
@@ -641,7 +647,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         base_pose_sp = self.get_base_sp_transform()
         return base_pose_sp[5]
 
-    def spawn_bookcases(self, n, easy=False):
+    def spawn_kallax(self):
         '''
         Prepares the simulation by spawning n bookcases.
 
@@ -690,7 +696,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         p_noise = self.p['setpoint']['noise']
         for l in sp_layers:
             z = 0.037 + (0.33 + 0.025) * l
-            y = 0.195 + 0.15
+            y = 0.195
             for dx in [+0.1775, -0.1775, +0.5325, -0.5325]:
                 pos_i = pos + Rt.dot(np.array([dx, y, z]))
                 nx = self.np_random.uniform(*p_noise['range_x'])
@@ -929,9 +935,9 @@ class OccupancyMap:
         self.idx_sp = pos_idx
 
     def generate_path(self, pos, n_its=5000):
-        harm = self.find_harmonic_field(n_its)
+        harm = self.find_harmonic_field_fast(self.idx_sp, self.coord_to_idx(pos), n_its)
         path, path_idx = self.find_path(harm, pos)
-        # self.visualize_path(path_idx)
+        #self.visualize_path(path_idx, harm)
         return path, path_idx
 
     def find_harmonic_field(self, n_its=5000):
@@ -954,6 +960,42 @@ class OccupancyMap:
             harm_last = harm.copy()
 
         return harm
+
+    def find_harmonic_field_fast(self, idx_init, idx_sp, n_its=5000):
+        harm_original = self.map.copy()
+        harm = self.map.copy()
+
+        kernel = np.ones((3, 3))/8.0
+        kernel[1, 1] = 0
+
+        margin = 1.0
+        left_cut_idx = min(idx_init[0], idx_sp[0])
+        left_cut_idx = int(round(max(0, left_cut_idx-margin*self.res)))
+        right_cut_idx = max(idx_init[0], idx_sp[0])
+        right_cut_idx = int(round(min(harm.shape[0], right_cut_idx+margin*self.res)))
+
+        harm = harm[left_cut_idx:right_cut_idx, :]
+        harm[0, :] = self.w_obj
+        harm[-1, :] = self.w_obj
+
+        harm_last = harm.copy()
+
+        obj_sel = harm_last == self.w_obj
+        sp_sel = harm_last == self.w_sp
+        for i in range(n_its):
+            harm = convolve2d(harm, kernel, mode='same')
+
+            harm[obj_sel] = self.w_obj
+            harm[sp_sel] = self.w_sp
+
+            diff = np.linalg.norm(harm-harm_last)
+            if diff < 1e-9:
+                break
+            harm_last = harm.copy()
+
+        harm_original[:, :] = self.w_obj
+        harm_original[left_cut_idx:right_cut_idx, :] = harm
+        return harm_original
 
     def find_path(self, harm, pos):
         x, y = self.coord_to_idx(pos)
@@ -980,8 +1022,11 @@ class OccupancyMap:
         path[-1] = self.pos_sp[0:2]
         return path, path_px
 
-    def visualize_path(self, path_idx):
-        map = self.map.copy()
+    def visualize_path(self, path_idx, harm=None):
+        if harm is None:
+            map = self.map.copy()
+        else:
+            map = harm.copy()
         for idx in path_idx:
             map[idx[0], idx[1]] = self.w_sp
         map[self.idx_sp[0], self.idx_sp[1]] = 1
