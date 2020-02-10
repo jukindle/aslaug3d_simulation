@@ -1,9 +1,10 @@
-from stable_baselines import PPO2
 import sys
 import time
 from multiprocessing import Pool
 import numpy as np
-
+import psutil
+ram_standard = psutil.virtual_memory()[1]
+from stable_baselines import PPO2
 
 # Parse inputs
 model_path = sys.argv[1]
@@ -15,6 +16,9 @@ def get_model_fps(model_path, secs):
     model = PPO2.load(model_path)
     obs = model.observation_space.sample()
     model.predict(obs, deterministic=True)
+    ram_loaded = psutil.virtual_memory()[1]
+    print(ram_loaded-ram_standard)
+
 
     i = 0
     obs = model.observation_space.sample()
