@@ -13,9 +13,10 @@
   "environment_params": {
     "base": {
       "acc_mag": [0.15, 0.15, 0.3],
-      "vel_mag":[0.1, 0.1, 0.2],
-      "std_acc_lin": 0.01,
-      "std_acc_ang": 0.01
+      "vel_mag_lin": 0.1,
+      "vel_mag_ang": 0.2,
+      "std_acc_lin": 0.001,
+      "std_acc_ang": 0.001
     },
     "joints": {
       "acc_mag": 0.8,
@@ -26,29 +27,26 @@
       "link_mag": [],
       "link_names": [],
       "vel_mag": 0.5,
-      "std_acc": 0.005,
+      "std_acc": 0.0001,
       "static_act_noise_mag": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     },
     "reward": {
-      "fac_ang_vel": 0.0,
       "fac_goal_dis_ang": 0,
+      "fac_goal_dis_lin": 0,
+
       "fac_base_sp_ang": 0,
-
-
 
       "rew_path_dis_p_m": 10,
       "rew_path_total": 30,
 
 
-      "fac_goal_dis_lin": 0,
       "fac_sp_hold": 20,
-      "fac_sp_hold_near": 15,
+      "fac_sp_hold_near": 40,
       "rew_collision": -60,
-      "rew_goal_reached": 35,
+      "rew_goal_reached": 10,
       "rew_joint_limits": -20,
       "rew_timeout": -15,
       "dis_lidar": 0.3,
-      "rew_lidar_p_s": 0,
       "rew_lidar_p_m": -1
     },
     "sensors": {
@@ -60,13 +58,13 @@
         "range": 5,
         "noise": {
           "mean": 0.0,
-          "std": 0.02,
+          "std": 0.015,
           "p_err": 0.025
         }
       },
       "setpoint_meas": {
-        "std_lin": 0.0025,
-        "std_ang": 0.0025
+        "std_lin": 0.00025,
+        "std_ang": 0.00025
       },
       "odometry": {
         "std_lin": 0.001,
@@ -75,14 +73,14 @@
     },
     "setpoint": {
       "continious_mode": true,
-      "hold_time": 2.0,
-      "tol_ang_mag": 3.14159,
-      "tol_lin_mag": 0.15,
+      "hold_time": 4.0,
+      "tol_ang_mag": 3.141592,
+      "tol_lin_mag": 0.025,
       "2D_locked": true,
       "layers": [3],
       "noise": {
-        "range_x": [-0.01, 0.01],
-        "range_y": [-0.01, 0.01],
+        "range_x": [-0.005, 0.005],
+        "range_y": [0.14, 0.19],
         "range_z": [0, 0]
       }
     },
@@ -95,7 +93,7 @@
       "door_length": [0.75, 2.5],
       "shelf_length": [0.3, 1.75],
       "shelf_height": [1.25, 1.5],
-      "shelf_width": [0.05, 2.0],
+      "shelf_width": [0.05, 1.5],
       "shelf_gap": [-0.5, 5.5],
       "min_clearance": 1.25,
       "prob_new_env": 0.25,
@@ -103,44 +101,29 @@
       "use_stop_action": false,
 
       "HPF": {
-        "res": 5
+        "res": 12
       },
 
-
       "spawn_range_x": 10.0,
-      "action_discretization": 5,
-      "n_bookcases": 12,
+      "action_discretization": 9,
       "size": 20,
       "tau": 0.04,
-      "timeout": 120,
-      "random_objects": [
-        {"file": "shelf1", "prob": 1, "pose2d": [7.185, 2.635, 0],
-          "d_low": [-1.0, -0.1, 0], "d_high": [0.0, 0.1, 0]},
-        {"file": "shelf2", "prob": 1, "pose2d": [8.785, 2.635, 0],
-          "d_low": [-0.2, -0.1, 0], "d_high": [0.5, 0.1, 0]},
-        {"file": "shelf3", "prob": 1, "pose2d": [9.885, 2.635, 0],
-          "d_low": [0.0, -0.1, 0], "d_high": [2.0, 0.1, 0]},
-        {"file": "shelf4", "prob": 1, "pose2d": [12.128, 2.635, 0],
-          "d_low": [0.0, -0.1, 0], "d_high": [6.0, 0.1, 0]},
-        {"file": "shelf5", "prob": 1, "pose2d": [17.719, 2.635, 0],
-          "d_low": [-3.0, -0.1, 0], "d_high": [1.5, 0.1, 0]},
-        {"file": "shelf6", "prob": 1, "pose2d": [22.211, 2.635, 0],
-          "d_low": [-1.5, -0.1, 0], "d_high": [0.0, 0.1, 0]},
-        {"file": "shelf7", "prob": 1, "pose2d": [9.586, 0, 0],
-          "d_low": [-0.2, -0.1, 0], "d_high": [1.7, 0.1, 0]},
-        {"file": "shelf8", "prob": 1, "pose2d": [12.326, 0, 0],
-          "d_low": [0.0, -0.1, 0], "d_high": [1.5, 0.1, 0]},
-        {"file": "shelf9", "prob": 1, "pose2d": [13.719, 0, 0],
-          "d_low": [0.0, -0.1, 0], "d_high": [1.0, 0.1, 0]}
-      ]
+      "timeout": 120
     },
     "adr": {
-      "success_threshold": 0.72,
-      "fail_threshold": 0.35,
-      "batch_size": 3,
+      "success_threshold": 0.625,
+      "fail_threshold": -1,
+      "batch_size": 5,
       "adaptions": [
-        {"param": "world.spawn_range_x", "start": 3.0, "end": 15.0, "steps": 10},
-        {"param": "setpoint.tol_lin_mag", "start": 0.35, "end": 0.15, "steps": 10}
+        [
+          {"param": "setpoint.tol_lin_mag", "start": 0.5, "end": 0.15, "steps": 8}
+        ],
+        [
+          {"param": "setpoint.tol_lin_mag", "start": 0.15, "end": 0.025, "steps": 8}
+        ],
+        [
+          {"param": "world.spawn_range_x", "start": 3.0, "end": 15.0, "steps": 12}
+        ]
       ]
 
     }
