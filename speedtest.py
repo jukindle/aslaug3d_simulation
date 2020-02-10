@@ -4,6 +4,9 @@ import time
 
 
 model = PPO2.load(sys.argv[1])
+obs = model.observation_space.sample()
+act = model.predict(obs, deterministic=True)
+
 exec_time = int(sys.argv[2])
 
 i = 0
