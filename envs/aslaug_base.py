@@ -93,9 +93,16 @@ class AslaugBaseEnv(gym.Env):
         joint_noise_fac = self.np_random.normal(1, j_std, joint_actions.shape)
         joint_actions *= joint_noise_fac
         # Calculate new velocities and clip limits
-        mb_vel_n_r = np.clip(mb_vel_c_r + mb_actions,
-                             -self.p["base"]["vel_mag"],
-                             +self.p["base"]["vel_mag"])
+        mb_vel_n_r = mb_vel_c_r + mb_actions
+        mb_vel_abs_lin = np.linalg.norm(mb_vel_n_r[0:2])
+        mb_vel_abs_ang = np.linalg.norm(mb_vel_n_r[2])
+        if mb_vel_abs_lin > 0.0:
+            cut_vel = min(mb_vel_abs_lin, self.p['base']['vel_mag_lin'])
+            mb_vel_n_r[0:2] = mb_vel_n_r[0:2] / mb_vel_abs_lin * cut_vel
+        if mb_vel_abs_ang > 0.0:
+            cut_vel = min(mb_vel_abs_ang, self.p['base']['vel_mag_ang'])
+            mb_vel_n_r[2] = mb_vel_n_r[2] / mb_vel_abs_ang * cut_vel
+
         joint_vel_n = np.clip(joint_vel_c + joint_actions,
                               -self.p["joints"]["vel_mag"],
                               +self.p["joints"]["vel_mag"])
@@ -135,19 +142,30 @@ class AslaugBaseEnv(gym.Env):
         '''
         if mode == 'rgb_array' or mode == 'human_fast' or not self.free_cam:
             camDistance = 4
+            dis, _ = self.calculate_goal_distance()
+            x1, y1 = 0.5, 1.5
+            x2, y2 = 2.0, 4.0
+            f = lambda x: min(y2, max(y1, (y2-y1)/(x2-x1)*x+y1-(y2-y1)/(x2-x1)*x1))
+            camDistance = f(dis)
+
+            x1, y1 = 0.5, -55
+            x2, y2 = 2.0, -80
+            f = lambda x: min(max(y1, y2), max(min(y1, y2), (y2-y1)/(x2-x1)*x+y1-(y2-y1)/(x2-x1)*x1))
+            pitch = f(dis)
             nearPlane = 0.01
             farPlane = 15
             fov = 60
 
             cam_pos, rpy = self.get_camera_pose()
 
+
             viewMatrix = pb.computeViewMatrixFromYawPitchRoll(cam_pos,
                                                               camDistance,
-                                                              rpy[2], rpy[1],
+                                                              rpy[2], pitch,
                                                               rpy[0], 2,
                                                               self.clientId)
         if not self.free_cam:
-            pb.resetDebugVisualizerCamera(camDistance, rpy[2], rpy[1], cam_pos,
+            pb.resetDebugVisualizerCamera(camDistance, rpy[2], pitch, cam_pos,
                                           self.clientId)
         if mode == 'rgb_array' or mode == 'human_fast':
             aspect = w / h
@@ -215,8 +233,7 @@ class AslaugBaseEnv(gym.Env):
         #                               self.clientId)
 
         # Spawn bookcases
-        self.spawn_bookcases(self.p["world"]["n_bookcases"],
-                             easy=easy_bookcases)
+        self.spawn_kallax()
 
         # Figure out joint mapping: self.joint_mapping maps as in
         # desired_mapping list.
