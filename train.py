@@ -16,7 +16,9 @@ model_idx = 0
 cl_idx = 0
 info_idx = 0
 ADR_idx = 1
+ADR_lvl = 0
 spwnrng = 1.5
+last_adaption = None
 last_adr_idx = 0
 logger = None
 
@@ -186,7 +188,7 @@ def main():
     delta_steps = model.n_batch
 
     def callback(_locals, _globals):
-        global n_steps, model_idx, cl_idx, env, info_idx, ADR_idx, spwnrng, last_adr_idx, logger
+        global n_steps, model_idx, cl_idx, env, info_idx, ADR_idx, spwnrng, last_adr_idx, logger, last_adaption, ADR_lvl
         n_cp_simple = 0
         n_steps += delta_steps
         if logger is None:
@@ -233,26 +235,43 @@ def main():
             ADR_idx += 1
             avg = np.average(model.env.env_method("get_success_rate"))
             print("Average success rate: {}".format(avg))
-            for adaption in env_params['adr']['adaptions']:
-                val = np.average(model.env.env_method("get_param", adaption['param']))
-                logger.log_scalar('ADR/{}'.format(adaption['param']), val, n_steps)
+            for level in range(len(env_params['adr']['adaptions'])):
+                for adaption in env_params['adr']['adaptions'][level]:
+                    val = np.average(model.env.env_method("get_param", adaption['param']))
+                    logger.log_scalar('ADR/{}/{}'.format(level, adaption['param']), val, n_steps)
+
             if avg >= env_params['adr']['success_threshold']:
-                last_adr_idx = np.random.randint(len(env_params['adr']['adaptions']))
-                lp = env_params['adr']['adaptions'][last_adr_idx]
-                val = np.average(model.env.env_method("get_param", lp['param']))
-                dval = +(lp['end']-lp['start'])/lp['steps']
-                val = max(min(lp['end'], lp['start']), min(max(lp['end'], lp['start']), val + dval))
-                print("Setting {} to {}(+)".format(lp['param'], val))
-                model.env.env_method("set_param", lp['param']
-                                     , val)
+                to_adapt = []
+                if ADR_lvl < len(env_params['adr']['adaptions']):
+                    for adapts in env_params['adr']['adaptions'][ADR_lvl]:
+                        val = np.average(model.env.env_method("get_param", adapts['param']))
+                        if val != adapts['end']:
+                            to_adapt.append(adapts)
+
+                if len(to_adapt) > 0:
+                    rnd_idx = np.random.randint(len(to_adapt))
+                    adapts = to_adapt[rnd_idx]
+                    last_adaption = adapts
+                    val = np.average(model.env.env_method("get_param", adapts['param']))
+                    dval = +(adapts['end']-adapts['start'])/adapts['steps']
+                    val = max(min(adapts['end'], adapts['start']), min(max(adapts['end'], adapts['start']), val + dval))
+
+                    print("Setting {} to {}(+)".format(adapts['param'], val))
+                    model.env.env_method("set_param", adapts['param'], val)
+                else:
+                    ADR_lvl = min(ADR_lvl + 1, len(env_params['adr']['adaptions']))
             if avg <= env_params['adr']['fail_threshold']:
-                lp = env_params['adr']['adaptions'][last_adr_idx]
-                val = np.average(model.env.env_method("get_param", lp['param']))
-                dval = -(lp['end']-lp['start'])/lp['steps']
-                val = max(min(lp['end'], lp['start']), min(max(lp['end'], lp['start']), val + dval))
-                print("Setting {} to {}(-)".format(lp['param'], val))
-                model.env.env_method("set_param", lp['param']
-                                     , val)
+                if last_adaption is not None:
+                    if last_adaption not in env_params['adr']['adaptions'][ADR_lvl]:
+                        ADR_lvl = max(0, ADR_lvl - 1)
+                    else:
+                        val = np.average(model.env.env_method("get_param", last_adaption['param']))
+                        dval = -(last_adaption['end']-last_adaption['start'])/last_adaption['steps']
+                        val = max(min(last_adaption['end'], last_adaption['start']), min(max(last_adaption['end'], last_adaption['start']), val + dval))
+                        print("Setting {} to {}(-)".format(last_adaption['param'], val))
+                        model.env.env_method("set_param", last_adaption['param']
+                                             , val)
+                        last_adaption = None
 
     # Print number of trainable weights
     n_els = np.sum([x.shape.num_elements()*x.trainable
