@@ -24,8 +24,8 @@
       "ee_link_name": "panda_ee",
       "init_states": [3.141592, 1.5708, 1.5708, 0, -1.5708, 3.14159, 0.7854],
       "joint_names": ["panda_joint1", "panda_joint4"],
-      "link_mag": [],
-      "link_names": [],
+      "link_mag": [1.2],
+      "link_names": ["panda_ee"],
       "vel_mag": 0.5,
       "std_acc": 0.0001,
       "static_act_noise_mag": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
@@ -36,7 +36,7 @@
 
       "fac_base_sp_ang": 0,
 
-      "rew_path_dis_p_m": 10,
+      "rew_path_dis_p_m": 5,
       "rew_path_total": 30,
 
 
@@ -45,8 +45,8 @@
       "rew_collision": -60,
       "rew_goal_reached": 10,
       "rew_joint_limits": -20,
-      "rew_timeout": -15,
-      "dis_lidar": 0.3,
+      "rew_timeout": -10,
+      "dis_lidar": 0.15,
       "rew_lidar_p_m": -1
     },
     "sensors": {
@@ -73,19 +73,19 @@
     },
     "setpoint": {
       "continious_mode": true,
-      "hold_time": 4.0,
+      "hold_time": 2.0,
       "tol_ang_mag": 3.141592,
       "tol_lin_mag": 0.025,
       "2D_locked": true,
       "layers": [3],
       "noise": {
         "range_x": [-0.005, 0.005],
-        "range_y": [0.14, 0.19],
+        "range_y": [0.15, 0.19],
         "range_z": [0, 0]
       }
     },
     "world": {
-      "corridor_length": [14.0, 17.0],
+      "corridor_length": [20.0, 25.0],
       "corridor_width": [2.35, 3.2],
       "wall_length": [0.3, 7.5],
       "wall_width": [0.05, 0.3],
@@ -95,34 +95,28 @@
       "shelf_height": [1.25, 1.5],
       "shelf_width": [0.05, 1.5],
       "shelf_gap": [-0.5, 5.5],
-      "min_clearance": 1.25,
+      "min_clearance": 1.4,
       "prob_new_env": 0.25,
       "prob_proceed": 0.25,
       "use_stop_action": false,
 
       "HPF": {
-        "res": 12
+        "res": 10
       },
 
-      "spawn_range_x": 10.0,
+      "spawn_range_x": 5.0,
       "action_discretization": 9,
-      "size": 20,
+      "size": 25,
       "tau": 0.04,
       "timeout": 120
     },
     "adr": {
-      "success_threshold": 0.625,
-      "fail_threshold": -1,
+      "success_threshold": 0.667,
+      "fail_threshold": 0.1,
       "batch_size": 5,
       "adaptions": [
         [
-          {"param": "setpoint.tol_lin_mag", "start": 0.5, "end": 0.15, "steps": 8}
-        ],
-        [
-          {"param": "setpoint.tol_lin_mag", "start": 0.15, "end": 0.025, "steps": 8}
-        ],
-        [
-          {"param": "world.spawn_range_x", "start": 3.0, "end": 15.0, "steps": 12}
+          {"param": "setpoint.tol_lin_mag", "start": 1.0, "end": 0.025, "steps": 25}
         ]
       ]
 

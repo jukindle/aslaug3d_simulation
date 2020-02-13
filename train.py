@@ -231,7 +231,7 @@ def main():
 
             # os.system("tmux set -g status-right \"Steps {} / {} | ADR {} | FPS {}\"".format(n_cp_simple, millify(float(steps), precision=6), spwnrng, _locals["fps"]))
 
-        if n_steps / 25000.0 >= ADR_idx and len(env_params['adr']['adaptions']) > 0:
+        if n_steps / 100000.0 >= ADR_idx and len(env_params['adr']['adaptions']) > 0:
             ADR_idx += 1
             avg = np.average(model.env.env_method("get_success_rate"))
             print("Average success rate: {}".format(avg))

@@ -399,7 +399,7 @@ class AslaugBaseEnv(gym.Env):
             link_eul_r = pb.getEulerFromQuaternion(link_ori_r, self.clientId)
             link_poses[i, :] = link_pos_r + link_eul_r
 
-        return np.take(link_poses, [0, 1, 5], axis=1)
+        return link_poses
 
     def get_joint_states(self, sel=None):
         '''
