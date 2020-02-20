@@ -5,11 +5,19 @@ import matplotlib.pyplot as plt
 
 
 filename, smoothing = sys.argv[1], float(sys.argv[2])
+if len(sys.argv) > 3:
+    max_ep =  float(sys.argv[3])
+else:
+    max_ep = None
 name = filename.split('/')[-1][:-4]
 path = '/'.join(filename.split('/')[:-1])
 df = pd.read_csv(filename, delimiter=',', header=1)
 
 data = np.array(df)
+if max_ep is not None:
+    idx_cut = np.argmax(data[:, 1] > max_ep)
+    data = data[:idx_cut, :]
+
 vals = data[:, 2]
 vals[vals <= -100] = -100
 k = np.ones(int(vals.shape[0]*smoothing))/int(vals.shape[0]*smoothing)

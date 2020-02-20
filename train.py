@@ -104,9 +104,9 @@ def main():
     if cl is not None:
         cl_list = []
         for clstr in cl:
-            cl_param, cl_start, cl_end, cl_steps = clstr.split(":")
+            cl_param, cl_start, cl_end, cl_begin, cl_steps = clstr.split(":")
             cl_list.append({"param": cl_param, "start": float(cl_start),
-                            "end": float(cl_end), "steps": float(cl_steps)})
+                            "end": float(cl_end), "begin": float(cl_begin), "steps": float(cl_steps)})
 
     # Prepare custom learning rate function
     def create_custom_lr(lr_max, lr_min, a, b):
@@ -210,19 +210,22 @@ def main():
                 json.dump(data, outfile)
             print("Stored model at episode {}.".format(n_cp_simple))
 
-        if cl is not None and n_steps / 50000.0 >= cl_idx:
+        if cl is not None and n_steps / 25000.0 >= cl_idx:
             cl_idx += 1
             for cl_entry in cl_list:
                 cl_val = (cl_entry["start"]
                           + (cl_entry["end"]
                              - cl_entry["start"])
-                          * n_steps / cl_entry["steps"])
+                          * (n_steps-cl_entry["begin"]) / cl_entry["steps"])
+
                 if cl_val >= min(cl_entry["start"], cl_entry["end"]) \
-                        and cl_val <= max(cl_entry["start"], cl_entry["end"]):
+                        and cl_val <= max(cl_entry["start"], cl_entry["end"]) \
+                        and n_steps >= cl_entry["begin"] and n_steps <= cl_entry["begin"] + cl_entry["steps"]:
                     model.env.env_method("set_param",
                                          cl_entry["param"], cl_val)
                     print("Modifying param {} to {}".format(cl_entry["param"],
                                                             cl_val))
+                    logger.log_scalar('CL/{}'.format(cl_entry['param']), cl_val, n_steps)
 
         if n_steps / 5000.0 >= info_idx:
             info_idx += 1
@@ -231,7 +234,7 @@ def main():
 
             # os.system("tmux set -g status-right \"Steps {} / {} | ADR {} | FPS {}\"".format(n_cp_simple, millify(float(steps), precision=6), spwnrng, _locals["fps"]))
 
-        if n_steps / 100000.0 >= ADR_idx and len(env_params['adr']['adaptions']) > 0:
+        if n_steps / 25000.0 >= ADR_idx and len(env_params['adr']['adaptions']) > 0:
             ADR_idx += 1
             avg = np.average(model.env.env_method("get_success_rate"))
             print("Average success rate: {}".format(avg))
