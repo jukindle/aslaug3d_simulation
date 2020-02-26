@@ -117,6 +117,13 @@ class AslaugBaseEnv(gym.Env):
                                    self.fixed_joint_states[i], 0.0,
                                    self.clientId)
 
+        human_done = self.human.step()
+        if human_done:
+            h_s_x = self.np_random.uniform(self.sp_init_pos[0]-7.5, self.sp_init_pos[0]+7.5)
+            h_s_y = self.np_random.uniform(-0.5, self.corridor_width+0.5)
+            h_e_x = self.np_random.uniform(self.sp_init_pos[0]-7.5, self.sp_init_pos[0]+7.5)
+            h_e_y = self.np_random.uniform(-0.5, self.corridor_width+0.5)
+            self.human.set_start_end([h_s_x, h_s_y], [h_e_x, h_e_y])
         # Execute one step in simulation
         pb.stepSimulation(self.clientId)
         self.valid_buffer_scan = False
@@ -223,6 +230,9 @@ class AslaugBaseEnv(gym.Env):
 
         # Spawn setpoint
         self.spId = self.spawn_setpoint()
+
+        # Setup human
+        self.human = Human(self.clientId, self.tau)
 
         # Spawn all objects in the environment
         self.additionalIds = self.spawn_additional_objects()
@@ -652,3 +662,70 @@ class AslaugBaseEnv(gym.Env):
                 print("ERROR: curriculum learning has wrong param path.")
                 return False
         return obj
+
+class Human:
+    def __init__(self, clientId, tau, vel_range=[0.05, 0.15],
+                 leg_dis_range=[0.2, 0.4], step_length_range=[0.5, 0.7]):
+        self.clientId = clientId
+        self.vel_range = vel_range
+        self.leg_dis_range = leg_dis_range
+        self.step_len_range = step_length_range
+        self.tau = tau
+        self.T = 0.0
+
+        self.v_l, self.v_r = lambda x: 0, lambda x: 0
+
+        # Load legs
+        model_path = 'urdf/human/leg1.urdf'
+        self.leg_l = pb.loadURDF(model_path,
+                                 useFixedBase=True,
+                                 physicsClientId=self.clientId)
+        self.leg_r = pb.loadURDF(model_path,
+                                 useFixedBase=True,
+                                 physicsClientId=self.clientId)
+
+
+    def set_start_end(self, start_pos, end_pos):
+        self.start_pos = np.array(start_pos)
+        self.end_pos = np.array(end_pos)
+        self.vel = np.random.uniform(*self.vel_range)
+        self.leg_dis = np.random.uniform(*self.leg_dis_range)
+        self.step_len = np.random.uniform(*self.step_len_range)
+
+        self.n_dir = ((self.end_pos - self.start_pos)
+                      / (np.linalg.norm(self.end_pos - self.start_pos)))
+        n_orth = np.array((-self.n_dir[1], self.n_dir[0]))
+
+        # Reset leg pos
+        p_l = self.start_pos + n_orth*self.leg_dis/2.0
+        p_r = self.start_pos - n_orth*self.leg_dis/2.0
+        pb.resetBasePositionAndOrientation(self.leg_l,
+                                           [p_l[0], p_l[1], 0], [0, 0, 0, 1],
+                                           physicsClientId=self.clientId)
+        pb.resetBasePositionAndOrientation(self.leg_r,
+                                           [p_r[0], p_r[1], 0], [0, 0, 0, 1],
+                                           physicsClientId=self.clientId)
+
+        # Calculate feet velocity functions
+        a = np.pi*self.vel
+        b = 2*a/self.step_len
+        self.v_l = lambda x: max(0.0, a*np.sin(b*x + np.pi/2.0))
+        self.v_r = lambda x: max(0.0, a*np.sin(b*x + 3*np.pi/2.0))
+
+        # Calculate time to travel
+        self.T = 0.0
+        self.T_max = np.linalg.norm(self.end_pos - self.start_pos)/self.vel
+
+    def step(self):
+        v_l = self.v_l(self.T)*self.n_dir
+        v_r = self.v_r(self.T)*self.n_dir
+
+        pb.resetBaseVelocity(self.leg_l, [v_l[0], v_l[1], 0], [0, 0, 0],
+                             self.clientId)
+        pb.resetBaseVelocity(self.leg_r, [v_r[0], v_r[1], 0], [0, 0, 0],
+                             self.clientId)
+
+        self.T += self.tau
+
+        if self.T >= self.T_max:
+            return True
