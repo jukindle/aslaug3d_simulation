@@ -1,5 +1,5 @@
 import time
-from envs.aslaug_v12easy import AslaugEnv
+from envs.aslaug_v121easyhumans import AslaugEnv
 
 
 N = 100000
@@ -8,10 +8,11 @@ env.reset()
 ts = time.time()
 for i in range(N):
     a = env.action_space.sample()
-    a = a * 0 + 3
-    a[3] = 2
+    a = a*0+2
+    # a = a * 0 + 3
+    # a[3] = 2
     o,r,d,i = env.step(a)
-    time.sleep(0.025)
+    # time.sleep(0.025)
     # print(env.joint_limits)
     if d:
         env.reset()

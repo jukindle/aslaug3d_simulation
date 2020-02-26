@@ -5,7 +5,7 @@
     "ent_coef": 0.003760312514286235,
     "gamma": 0.999,
     "lam": 0.8,
-    "learning_rate": [0.000145, 0.000145, 0.995, 0.2],
+    "learning_rate": [0.0005, 0.0001, 0.995, 0.2],
     "n_steps": 2048,
     "nminibatches": 8,
     "noptepochs": 30
@@ -74,7 +74,7 @@
       "continious_mode": true,
       "hold_time": 1.5,
       "tol_ang_mag": 3.141592,
-      "tol_lin_mag": 0.0425,
+      "tol_lin_mag": 0.045,
       "2D_locked": true,
       "layers": [3],
       "noise": {
@@ -103,7 +103,11 @@
         "res": 8
       },
 
-      "spawn_range_x": 8.0,
+
+      "spawn_range": 7.5,
+
+
+      "spawn_range_x": 7.5,
       "action_discretization": 5,
       "size": 20,
       "tau": 0.04,
@@ -114,6 +118,12 @@
       "fail_threshold": 0.1,
       "batch_size": 5,
       "adaptions": [
+        [
+          {"param": "world.spawn_range", "start": 0.1, "end": 1.0, "steps": 10}
+        ],
+        [
+          {"param": "world.spawn_range", "start": 1.0, "end": 7.5, "steps": 10}
+        ]
       ]
 
     }

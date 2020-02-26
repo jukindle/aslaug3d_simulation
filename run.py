@@ -96,8 +96,8 @@ class EnvRunner:
 
     def run_n_episodes(self, n_episodes=1):
         self.n_success = 0
-        self.fps_queue = 400 * [0.02]
-        self.fps_NN_queue = 1000 * [0.02]
+        self.fps_queue = 400 * [0.04]
+        self.fps_NN_queue = 1000 * [0.04]
         for episode in range(n_episodes):
             self.act_list = []
             self.obs_list = []
@@ -113,7 +113,7 @@ class EnvRunner:
                 self.step()
                 self.render()
                 dt = time.time() - ts
-                if not self.no_sleep and 0.02 - dt > 0:
+                if not self.no_sleep and self.env.p["world"]["tau"] - dt > 0:
                     time.sleep(self.env.p["world"]["tau"] - dt)
                 self.fps_queue.pop(0)
                 self.fps_queue.append(dt)
