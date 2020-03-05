@@ -1,8 +1,8 @@
 import time
-from envs.aslaug_v121easyhumans import AslaugEnv
+from envs.aslaug_v3 import AslaugEnv
 
 
-N = 100000
+N = 100000000
 env = AslaugEnv(gui=True)
 env.reset()
 ts = time.time()

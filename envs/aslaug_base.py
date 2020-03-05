@@ -224,15 +224,16 @@ class AslaugBaseEnv(gym.Env):
         pb.configureDebugVisualizer(pb.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 0)
         pb.configureDebugVisualizer(pb.COV_ENABLE_DEPTH_BUFFER_PREVIEW, 0)
         pb.configureDebugVisualizer(pb.COV_ENABLE_RGB_BUFFER_PREVIEW, 0)
+        pb.setPhysicsEngineParameter(enableFileCaching=0)
+
+        # Setup human
+        self.human = Human(self.clientId, self.tau)
 
         # Spawn robot
         self.robotId = self.spawn_robot()
 
         # Spawn setpoint
         self.spId = self.spawn_setpoint()
-
-        # Setup human
-        self.human = Human(self.clientId, self.tau)
 
         # Spawn all objects in the environment
         self.additionalIds = self.spawn_additional_objects()
@@ -306,6 +307,9 @@ class AslaugBaseEnv(gym.Env):
 
         self.rays = (r_from, r_to)
 
+        self.configure_ext_collisions(self.human.leg_l, self.robotId, self.collision_links)
+        self.configure_ext_collisions(self.human.leg_r, self.robotId, self.collision_links)
+
     def seed(self, seed=None):
         '''
         Initializes numpy's random package with a given seed.
@@ -331,6 +335,12 @@ class AslaugBaseEnv(gym.Env):
                          [np.sin(ang),  +np.cos(ang),   0],
                          [0,            0,              1]])
 
+
+    def get_ee_velocity(self):
+        state_ee = pb.getLinkState(self.robotId, self.eeLinkId, True, False,
+                                   self.clientId)
+
+        return np.array(state_ee[6])
     def get_ee_sp_transform(self):
         '''
         Calculates pose of setpoint w.r.t. end effector frame.
@@ -457,37 +467,36 @@ class AslaugBaseEnv(gym.Env):
         scan_front = None
         scan_rear = None
 
-        if self.lidarLinkId1 is not None:
-            # Get pose of lidar
-            states = pb.getLinkState(self.robotId, self.lidarLinkId1,
-                                     False, False, self.clientId)
-            lidar_pos, lidar_ori = states[4:6]
-            lidar_pos = np.array(lidar_pos)
-            R = np.array(pb.getMatrixFromQuaternion(lidar_ori))
-            R = np.reshape(R, (3, 3))
-            scan_l = R.dot(self.rays[0]).T + lidar_pos
-            scan_h = R.dot(self.rays[1]).T + lidar_pos
-            scan_r = pb.rayTestBatch(scan_l.tolist(), scan_h.tolist(),
-                                     self.clientId)
 
-            scan = [x[2]*self.p["sensors"]["lidar"]["range"] for x in scan_r]
-            scan_front = scan
+        # Get pose of lidar
+        states = pb.getLinkState(self.robotId, self.lidarLinkId1,
+                                 False, False, self.clientId)
+        lidar_pos, lidar_ori = states[4:6]
+        lidar_pos = np.array(lidar_pos)
+        R = np.array(pb.getMatrixFromQuaternion(lidar_ori))
+        R = np.reshape(R, (3, 3))
+        scan_l1 = R.dot(self.rays[0]).T + lidar_pos
+        scan_h1 = R.dot(self.rays[1]).T + lidar_pos
 
-        if self.lidarLinkId2 is not None:
-            # Get pose of lidar
-            states = pb.getLinkState(self.robotId, self.lidarLinkId2,
-                                     False, False, self.clientId)
-            lidar_pos, lidar_ori = states[4:6]
-            lidar_pos = np.array(lidar_pos)
-            R = np.array(pb.getMatrixFromQuaternion(lidar_ori))
-            R = np.reshape(R, (3, 3))
-            scan_l = R.dot(self.rays[0]).T + lidar_pos
-            scan_h = R.dot(self.rays[1]).T + lidar_pos
-            scan_r = pb.rayTestBatch(scan_l.tolist(), scan_h.tolist(),
-                                     self.clientId)
+        # Get pose of lidar
+        states = pb.getLinkState(self.robotId, self.lidarLinkId2,
+                                 False, False, self.clientId)
+        lidar_pos, lidar_ori = states[4:6]
+        lidar_pos = np.array(lidar_pos)
+        R = np.array(pb.getMatrixFromQuaternion(lidar_ori))
+        R = np.reshape(R, (3, 3))
+        scan_l2 = R.dot(self.rays[0]).T + lidar_pos
+        scan_h2 = R.dot(self.rays[1]).T + lidar_pos
 
-            scan = [x[2]*self.p["sensors"]["lidar"]["range"] for x in scan_r]
-            scan_rear = scan
+        scan_l = np.concatenate((scan_l1, scan_l2))
+        scan_h = np.concatenate((scan_h1, scan_h2))
+
+        scan_r = pb.rayTestBatch(scan_l.tolist(), scan_h.tolist(),
+                                 self.clientId)
+
+        scan = [x[2]*self.p["sensors"]["lidar"]["range"] for x in scan_r]
+        scan_front = scan[:len(scan_l1)]
+        scan_rear = scan[len(scan_l1):]
         self.last_scan = [scan_front, scan_rear]
         self.valid_buffer_scan = True
         return [scan_front, scan_rear]

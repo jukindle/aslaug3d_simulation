@@ -15,7 +15,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
     def __init__(self, folder_name="", gui=False, free_cam=False,
                  recording=False, params=None, randomized_env=True):
         # Common params
-        version = "v120"
+        version = "v121"
         self.folder_name = folder_name
         self.soft_reset = False
         self.recording = recording
@@ -24,6 +24,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         self.cum_rew = 0.0
         self.randomized_env = randomized_env
         self.scan_calib = None
+        self.last_ee_vel = None
 
         self.collision_links = ["top_link", "chassis_link", "panda_link1",
                                 "panda_link2", "panda_link3", "panda_link4",
@@ -153,52 +154,81 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                        * self.p["reward"]["fac_goal_dis_ang"] * delta_eucl_ang)
             self.last_eucl_ang = eucl_ang
 
-        # Reward from optimal path
-        dis_to_p, rem_dis = self.get_path_stats()
-
-        delta_dtp = self.last_dis_to_path - dis_to_p
-        delta_rem_dis = self.last_remaining_dis - rem_dis
-
-        fac_dtp = self.p["reward"]["rew_path_dis_p_m"]
-        fac_rem_dis = self.p["reward"]["rew_path_total"]
-
-        reward += fac_dtp*delta_dtp
-        reward += fac_rem_dis*delta_rem_dis/self.total_path_length
-
-        self.last_dis_to_path = dis_to_p
-        self.last_remaining_dis = rem_dis
+        # # Reward from optimal path
+        # dis_to_p, rem_dis = self.get_path_stats()
+        #
+        # delta_dtp = self.last_dis_to_path - dis_to_p
+        # delta_rem_dis = self.last_remaining_dis - rem_dis
+        #
+        # fac_dtp = self.p["reward"]["rew_path_dis_p_m"]
+        # fac_rem_dis = self.p["reward"]["rew_path_total"]
+        #
+        # reward += fac_dtp*delta_dtp
+        # reward += fac_rem_dis*delta_rem_dis/self.total_path_length
+        #
+        # self.last_dis_to_path = dis_to_p
+        # self.last_remaining_dis = rem_dis
 
         # Reward: Goal-hold
+        # Replaced by EE velocity
+        ee_vels = self.get_ee_velocity()
+        ee_speed = np.linalg.norm(ee_vels)
         if eucl_dis <= self.p["setpoint"]["tol_lin_mag"] and \
                 eucl_ang <= self.p["setpoint"]["tol_ang_mag"]:
+            ee_vels = self.get_ee_velocity()
+            ee_speed = np.linalg.norm(ee_vels)
+            if self.last_ee_vel is None:
+                self.last_ee_vel = ee_speed
+                self.ee_vel_fac = self.p['reward']['ee_vel_target_reduction']/max(ee_speed, 0.01)
 
-            if self.sp_hold_time >= self.p["setpoint"]["hold_time"]:
-                if self.p["setpoint"]["continious_mode"]:
-                    self.soft_reset = True
-                    self.sp_hold_time = 0.0
-                    self.step_no = 0
-                    self.integrated_hold_reward = 0.0
-                if not self.recording:
-                    done = True
-                    info["done_reason"] = "success"
-                else:
-                    self.success_counter += 1
-                    self.reset()
+            delta_vel = self.last_ee_vel - ee_speed
 
+            reward += delta_vel*self.ee_vel_fac
+
+            if ee_speed <= self.p['reward']['ee_vel_limit']:
+                done = True
+                info["done_reason"] = "success"
                 reward += self.p["reward"]["rew_goal_reached"]
+                self.success_counter += 1
+                self.soft_reset = True
+                self.last_ee_vel = None
+                self.step_no = 0
+            else:
+                self.last_ee_vel = ee_speed
 
-            self.sp_hold_time += self.tau
-            dis_f = (1.0 - eucl_dis / self.p["setpoint"]["tol_lin_mag"])**2
-            rew_hold = (self.tau * self.p["reward"]["fac_sp_hold"]
-                        + self.tau
-                        * self.p["reward"]["fac_sp_hold_near"] * dis_f)
-            rew_hold = rew_hold / self.p["setpoint"]["hold_time"]
-            self.integrated_hold_reward += rew_hold
-            reward += rew_hold
         else:
-            reward -= self.integrated_hold_reward
-            self.integrated_hold_reward = 0.0
-            self.sp_hold_time = 0.0
+            self.last_ee_vel = None
+
+        # if eucl_dis <= self.p["setpoint"]["tol_lin_mag"] and \
+        #         eucl_ang <= self.p["setpoint"]["tol_ang_mag"]:
+
+        #     if self.sp_hold_time >= self.p["setpoint"]["hold_time"]:
+        #         if self.p["setpoint"]["continious_mode"]:
+        #             self.soft_reset = True
+        #             self.sp_hold_time = 0.0
+        #             self.step_no = 0
+        #             self.integrated_hold_reward = 0.0
+        #         if not self.recording:
+        #             done = True
+        #             info["done_reason"] = "success"
+        #         else:
+        #             self.success_counter += 1
+        #             self.reset()
+        #
+        #         reward += self.p["reward"]["rew_goal_reached"]
+        #
+        #     self.sp_hold_time += self.tau
+        #     dis_f = (1.0 - eucl_dis / self.p["setpoint"]["tol_lin_mag"])**2
+        #     rew_hold = (self.tau * self.p["reward"]["fac_sp_hold"]
+        #                 + self.tau
+        #                 * self.p["reward"]["fac_sp_hold_near"] * dis_f)
+        #     rew_hold = rew_hold / self.p["setpoint"]["hold_time"]
+        #     self.integrated_hold_reward += rew_hold
+        #     reward += rew_hold
+        # else:
+        #     reward -= self.integrated_hold_reward
+        #     self.integrated_hold_reward = 0.0
+        #     self.sp_hold_time = 0.0
         self.cum_rew += reward
         return reward, done, info
 
@@ -295,10 +325,22 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         collides = True
         n_tries = 0
         pb.stepSimulation(self.clientId)
+        err_c = 0
         while collides:
             n_tries += 1
             if n_tries >= 300:
+                err_c += 1
+                if err_c == 10:
+                    print("Agent stuck...")
                 self.randomize_environment(force_new_env=True)
+
+                h_s_x = self.np_random.uniform(self.sp_init_pos[0]-7.5, self.sp_init_pos[0]+7.5)
+                h_s_y = self.np_random.uniform(-0.5, self.corridor_width+0.5)
+                h_e_x = self.np_random.uniform(self.sp_init_pos[0]-7.5, self.sp_init_pos[0]+7.5)
+                h_e_y = self.np_random.uniform(-0.5, self.corridor_width+0.5)
+                self.human.set_start_end([h_s_x, h_s_y], [h_e_x, h_e_y])
+
+
                 n_tries = 0
             cl = self.corridor_length
 
@@ -310,7 +352,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                                        self.joint_limits[0, 1])
 
             rs = np.random.uniform(0, dis_sp)
-            rsphi = np.random.uniform(-np.pi, np.pi)
+            rsphi = np.random.uniform(np.pi/2.0, 3*np.pi/2.0)
             rx = rs*np.cos(rsphi)
             ry = rs*np.sin(rsphi)
             ths = np.random.uniform(-np.pi, np.pi)
@@ -318,9 +360,10 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
 
             c = lambda x: np.cos(x)
             s = lambda x: np.sin(x)
-            T_es = np.array([[c(ths), -s(ths), rx],
+            T_se = np.array([[c(ths), -s(ths), rx],
                              [s(ths), c(ths), ry],
                              [0, 0, 1]])
+            T_es = np.linalg.inv(T_se)
 
             T_2e = np.array([[1, 0, 0.594],
                              [0, 1, -0.083],
@@ -382,6 +425,8 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         obs = self.calculate_observation()
         self.last_yaw = None
 
+        if err_c >= 10:
+            print("AGENT FREED! Whoow")
         return obs
 
     def reset_setpoint(self, max_dis=None):
@@ -413,7 +458,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         if eucl_dis == 0:
             self.scl_eucl_dis = 0
         else:
-            self.scl_eucl_dis = 1 / (self.last_eucl_dis+1e-9)
+            self.scl_eucl_dis = 1 / max(self.last_eucl_dis+1e-9, 3.0)
         if eucl_ang == 0:
             self.scl_eucl_ang = 0
         else:
@@ -448,8 +493,14 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
             idx_j = info_j[0]
 
             enabled = link_name_j in enabled_links
+    
             pb.setCollisionFilterPair(body, bodyExt, idx_j, -1, enabled,
                                       self.clientId)
+            for k in range(pb.getNumJoints(bodyExt, physicsClientId=self.clientId)):
+                info_k = pb.getJointInfo(bodyExt, k, physicsClientId=self.clientId)
+                idx_k = info_k[0]
+                pb.setCollisionFilterPair(body, bodyExt, idx_j, idx_k, enabled,
+                                          self.clientId)
 
     def configure_self_collisions(self, body, enabled_pairs):
         pairs = ["{}|{}".format(x, y) for x, y in enabled_pairs]
@@ -478,7 +529,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                                    physicsClientId=self.clientId)
             link_name = info[12].decode("utf-8")
             idx = info[0]
-            print(idx, link_name)
+            #print(idx, link_name)
             if link_name == linknameA:
                 linkA = idx
         for j in range(pb.getNumJoints(bodyB,
@@ -524,7 +575,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
 
         # Reset occupancy map
         om_res = self.p['world']['HPF']['res']
-        self.occmap = OccupancyMap(0, corr_l, 0, corr_w, om_res)
+        self.occmap = OccupancyMapGhost(0, corr_l, 0, corr_w, om_res)
 
         # Spawn walls, row 1
         pos = np.zeros(3)
@@ -820,50 +871,13 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         return ee_pos_w, ee_ori_w
 
     def generate_occmap_path(self):
-        ee_pos_w, ee_ori_w = self.get_ee_pose()
-        pos = [ee_pos_w[0], ee_pos_w[1]]
-        self.path, path_idx = self.occmap.generate_path(pos, n_its=25000)
-        self.path = np.array(self.path)
-        # self.occmap.visualize_path(path_idx)
-        dis_to_p, rem_dis = self.get_path_stats()
-        self.last_dis_to_path = dis_to_p
-        self.total_path_length = rem_dis
-        self.last_remaining_dis = rem_dis
+        self.path = np.zeros(1)
+        self.last_dis_to_path = 0
+        self.total_path_length = 1
+        self.last_remaining_dis = 0
 
     def get_path_stats(self):
-        pos_ee, _ = self.get_ee_pose()
-        pos_ee = np.array(pos_ee[0:2])
-        deltas = self.path - pos_ee
-        dist_2 = np.einsum('ij,ij->i', deltas, deltas)
-        idx = np.argmin(dist_2)
-
-        candidates = []
-        if idx > 0:
-            idx_next = idx
-            candidates.append((self.path[(idx-1):idx+1, :], idx_next))
-        if idx < self.path.shape[0]-1:
-            idx_next = idx + 1
-            candidates.append((self.path[idx:(idx+2), :], idx_next))
-
-        results_p = []
-        results_d = []
-        results_idx_next = []
-
-        for cand, idx_next in candidates:
-            p, d = self.get_nearest_point_on_line(cand, pos_ee)
-            results_p.append(p)
-            results_d.append(d)
-            results_idx_next.append(idx_next)
-        idx_r = np.argmin(results_d)
-
-        nearest_point = np.array(results_p[idx_r])
-        distance = results_d[idx_r]
-        idx_next = results_idx_next[idx_r]
-
-        dis_to_next_p = np.linalg.norm(nearest_point - self.path[idx_next, :])
-        total_path_dis = dis_to_next_p + self.path_length_from_index(idx_next)
-
-        return distance, total_path_dis
+        return 0, 0
 
     def get_nearest_point_on_line(self, pts_l, pt):
         x1, y1 = pts_l[0, :]
@@ -1134,3 +1148,45 @@ class OccupancyMap:
         coord_y = (idx[1]-1)/self.res+self.y_l
 
         return coord_x, coord_y
+
+
+
+class OccupancyMapGhost:
+    def __init__(self, x_l, x_u, y_l, y_u, res):
+        return
+
+    def add_rect(self, pos, dx, dy):
+        return
+    def set_sp(self, pos, tol_radius=0.2):
+        return
+    def add_sp(self, pos, tol_radius=0.2):
+        return
+    def generate_path(self, pos, n_its=5000):
+        harm = self.find_harmonic_field_fast(self.idx_sp, self.coord_to_idx(pos), n_its)
+        path, path_idx = self.find_path(harm, pos)
+        #self.visualize_path(path_idx, harm)
+        return path, path_idx
+
+    def find_harmonic_field(self, n_its=5000):
+        return Nine
+
+    def find_harmonic_field_fast(self, idx_init, idx_sp, n_its=5000):
+        return None
+
+    def find_path(self, harm, pos):
+        return None, None
+
+    def visualize_path(self, path_idx, harm=None):
+        return
+
+    def visualize(self, map):
+        return
+
+    def reset(self):
+        return
+
+    def coord_to_idx(self, pos):
+        return 0, 0
+
+    def idx_to_coord(self, idx):
+        return 0, 0

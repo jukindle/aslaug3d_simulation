@@ -38,7 +38,7 @@
       "rew_path_total": 30,
 
 
-      "fac_goal_dis_lin": 0,
+      "fac_goal_dis_lin": 30,
       "fac_sp_hold": 20,
       "fac_sp_hold_near": 40,
       "rew_collision": -60,
@@ -46,14 +46,18 @@
       "rew_joint_limits": -20,
       "rew_timeout": -15,
       "dis_lidar": 0.3,
-      "rew_lidar_p_m": -1
+      "rew_lidar_p_m": -1,
+
+
+      "ee_vel_target_reduction": 20,
+      "ee_vel_limit": 0.02
     },
     "sensors": {
       "lidar": {
         "ang_mag": 2.0944,
         "link_id1": "front_laser",
         "link_id2": "rear_laser",
-        "n_scans": 201,
+        "n_scans": 101,
         "range": 5,
         "noise": {
           "mean": 0.0,
@@ -114,15 +118,12 @@
       "timeout": 120
     },
     "adr": {
-      "success_threshold": 0.63,
+      "success_threshold": 0.7,
       "fail_threshold": 0.1,
       "batch_size": 5,
       "adaptions": [
         [
-          {"param": "world.spawn_range", "start": 0.1, "end": 1.0, "steps": 10}
-        ],
-        [
-          {"param": "world.spawn_range", "start": 1.0, "end": 7.5, "steps": 10}
+          {"param": "world.spawn_range", "start": 3.5, "end": 7.5, "steps": 10}
         ]
       ]
 
