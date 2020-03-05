@@ -108,14 +108,10 @@ class AslaugBaseEnv(gym.Env):
                               +self.p["joints"]["vel_mag"])
 
         # Apply new velocity commands to robot
-        self.set_velocities(mb_vel_n_r, joint_vel_n)
+        self.robot.setVelocities(mb_vel_n_r, joint_vel_n)
 
         # Ensure that fixed joints do not move at all
-        for i in range(len(self.actuator_selection)):
-            if not self.actuator_selection[i]:
-                pb.resetJointState(self.robotId, self.joint_mapping[i],
-                                   self.fixed_joint_states[i], 0.0,
-                                   self.clientId)
+        self.robot.resetFixedJoints()
 
         human_done = self.human.step()
         if human_done:
@@ -125,8 +121,7 @@ class AslaugBaseEnv(gym.Env):
             h_e_y = self.np_random.uniform(-0.5, self.corridor_width+0.5)
             self.human.set_start_end([h_s_x, h_s_y], [h_e_x, h_e_y])
         # Execute one step in simulation
-        pb.stepSimulation(self.clientId)
-        self.valid_buffer_scan = False
+        self.stepSimulation()
 
         # Update internal state
         self.state = {"base_vel": mb_vel_n_r, "joint_vel": joint_vel_n}
@@ -230,7 +225,7 @@ class AslaugBaseEnv(gym.Env):
         self.human = Human(self.clientId, self.tau)
 
         # Spawn robot
-        self.robotId = self.spawn_robot()
+        self.spawn_robot()
 
         # Spawn setpoint
         self.spId = self.spawn_setpoint()
@@ -238,47 +233,8 @@ class AslaugBaseEnv(gym.Env):
         # Spawn all objects in the environment
         self.additionalIds = self.spawn_additional_objects()
 
-        # Enable collision of base and all objects
-        # for id in self.additionalIds:
-        #     pb.setCollisionFilterPair(self.robotId, id, -1, -1, True,
-        #                               self.clientId)
-
         # Spawn bookcases
         self.spawn_kallax()
-
-        # Figure out joint mapping: self.joint_mapping maps as in
-        # desired_mapping list.
-        self.joint_mapping = np.zeros(7, dtype=int)
-        self.link_mapping = np.zeros(self.n_links, dtype=int)
-        self.joint_limits = np.zeros((7, 2), dtype=float)
-        self.eeLinkId = None
-        self.baseLinkId = None
-        self.lidarLinkId1 = None
-        self.lidarLinkId2 = None
-
-        joint_names = ["panda_joint{}".format(x) for x in range(1, 8)]
-        link_names = self.p["joints"]["link_names"]
-
-        for j in range(pb.getNumJoints(self.robotId,
-                                       physicsClientId=self.clientId)):
-            info = pb.getJointInfo(self.robotId, j,
-                                   physicsClientId=self.clientId)
-            j_name, l_name = info[1].decode("utf-8"), info[12].decode("utf-8")
-            idx = info[0]
-            if j_name in joint_names:
-                map_idx = joint_names.index(j_name)
-                self.joint_mapping[map_idx] = idx
-                self.joint_limits[map_idx, :] = info[8:10]
-            if l_name in link_names:
-                self.link_mapping[link_names.index(l_name)] = idx
-            if l_name == self.p["joints"]["ee_link_name"]:
-                self.eeLinkId = idx
-            if l_name == self.p["joints"]["base_link_name"]:
-                self.baseLinkId = idx
-            if l_name == self.p["sensors"]["lidar"]["link_id1"]:
-                self.lidarLinkId1 = idx
-            if l_name == self.p["sensors"]["lidar"]["link_id2"]:
-                self.lidarLinkId2 = idx
 
         for j in range(pb.getNumJoints(self.spId,
                                        physicsClientId=self.clientId)):
@@ -288,24 +244,6 @@ class AslaugBaseEnv(gym.Env):
             idx = info[0]
             if link_name == "grasp_loc":
                 self.spGraspLinkId = idx
-
-        self.actuator_selection = np.zeros(7, bool)
-        for i, name in enumerate(joint_names):
-            if name in self.p["joints"]["joint_names"]:
-                self.actuator_selection[i] = 1
-
-        # Prepare lidar
-        n_scans = self.p["sensors"]["lidar"]["n_scans"]
-        mag_ang = self.p["sensors"]["lidar"]["ang_mag"]
-        scan_range = self.p["sensors"]["lidar"]["range"]
-        angs = ((np.array(range(n_scans))
-                 - (n_scans-1)/2.0)*2.0/n_scans*mag_ang)
-        r_uv = np.vstack((np.cos(angs), np.sin(angs),
-                          np.zeros(angs.shape[0])))
-        r_from = r_uv * 0.1
-        r_to = r_uv * scan_range
-
-        self.rays = (r_from, r_to)
 
         self.configure_ext_collisions(self.human.leg_l, self.robotId, self.collision_links)
         self.configure_ext_collisions(self.human.leg_r, self.robotId, self.collision_links)
@@ -335,197 +273,19 @@ class AslaugBaseEnv(gym.Env):
                          [np.sin(ang),  +np.cos(ang),   0],
                          [0,            0,              1]])
 
-
-    def get_ee_velocity(self):
-        state_ee = pb.getLinkState(self.robotId, self.eeLinkId, True, False,
-                                   self.clientId)
-
-        return np.array(state_ee[6])
     def get_ee_sp_transform(self):
-        '''
-        Calculates pose of setpoint w.r.t. end effector frame.
-
-        Returns:
-            numpy.array: 6D pose of setpoint in end effector frame.
-        '''
-        state_ee = pb.getLinkState(self.robotId, self.eeLinkId,
-                                   False, False, self.clientId)
-        ee_pos_w, ee_ori_w = state_ee[4:6]
-        w_pos_ee, w_ori_ee = pb.invertTransform(ee_pos_w, ee_ori_w,
-                                                self.clientId)
-
         state_sp = pb.getLinkState(self.spId, self.spGraspLinkId,
                                    False, False, self.clientId)
         sp_pos_w, sp_ori_w = state_sp[4:6]
 
-        sp_pos_ee, sp_ori_ee = pb.multiplyTransforms(w_pos_ee, w_ori_ee,
-                                                     sp_pos_w, sp_ori_w,
-                                                     self.clientId)
-
-        sp_eul_ee = pb.getEulerFromQuaternion(sp_ori_ee, self.clientId)
-
-        return np.array(sp_pos_ee + sp_eul_ee)
+        return self.robot.getEESPTransform(sp_pos_w, sp_ori_w)
 
     def get_base_sp_transform(self):
-        '''
-        Calculates pose of setpoint w.r.t. base frame.
-
-        Returns:
-            numpy.array: 6D pose of setpoint in base frame.
-        '''
-        state_ee = pb.getLinkState(self.robotId, self.baseLinkId,
-                                   False, False, self.clientId)
-        ee_pos_w, ee_ori_w = state_ee[4:6]
-        w_pos_ee, w_ori_ee = pb.invertTransform(ee_pos_w, ee_ori_w,
-                                                self.clientId)
-
         state_sp = pb.getLinkState(self.spId, self.spGraspLinkId,
                                    False, False, self.clientId)
         sp_pos_w, sp_ori_w = state_sp[4:6]
 
-        sp_pos_ee, sp_ori_ee = pb.multiplyTransforms(w_pos_ee, w_ori_ee,
-                                                     sp_pos_w, sp_ori_w,
-                                                     self.clientId)
-
-        sp_eul_ee = pb.getEulerFromQuaternion(sp_ori_ee, self.clientId)
-
-        return np.array(sp_pos_ee + sp_eul_ee)
-
-    def get_link_states(self, links_idx):
-        '''
-        Obtain matrix with 6D poses of links specified.
-
-        Args:
-            links_idx (list): Indices of links from link_names list in params.
-        Returns:
-            numpy.array: 3D poses for all link indices.
-                Shape [len(links_idx, 6)] where second dim. (x,y,z,r,p,y)
-        '''
-        # NOTE: Using euler angles, might this be a problem?
-        link_poses = np.zeros((len(links_idx), 6))
-        states = pb.getLinkStates(self.robotId, links_idx, False, False,
-                                  self.clientId)
-        states_mb = pb.getLinkState(self.robotId, self.baseLinkId, False,
-                                    False, self.clientId)
-        mb_pos_w, mb_ori_w = states_mb[4:6]
-        w_pos_mb, w_ori_mb = pb.invertTransform(mb_pos_w, mb_ori_w,
-                                                self.clientId)
-        for i, state in enumerate(states):
-            link_pos_w, link_ori_w = state[4:6]
-            link_pos_r, link_ori_r = pb.multiplyTransforms(w_pos_mb, w_ori_mb,
-                                                           link_pos_w,
-                                                           link_ori_w,
-                                                           self.clientId)
-            link_eul_r = pb.getEulerFromQuaternion(link_ori_r, self.clientId)
-            link_poses[i, :] = link_pos_r + link_eul_r
-
-        return link_poses
-
-    def get_joint_states(self, sel=None):
-        '''
-        Obtain joint positions and velocities.
-
-        Returns:
-            numpy.array: Joint positions in radians.
-            numpy.array: Joint velocities in radians/s.
-        '''
-        states = pb.getJointStates(self.robotId, self.joint_mapping,
-                                   self.clientId)
-        j_pos = [x[0] for x in states]
-        j_vel = [x[1] for x in states]
-
-        if sel is None:
-            return np.array(j_pos), np.array(j_vel)
-        else:
-            return np.array(j_pos)[sel], np.array(j_vel)[sel]
-
-    def get_base_vels(self):
-        '''
-        Obtain base velocities.
-
-        Returns:
-            numpy.array: Velocities of movebase (x, y, theta).
-        '''
-        state = pb.getLinkState(self.robotId, self.baseLinkId, True,
-                                False, self.clientId)
-
-        mb_ang_w = pb.getEulerFromQuaternion(state[5])[2]
-        v_lin, v_ang = state[6:8]
-        mb_vel_w = np.array(v_lin[0:2] + v_ang[2:3])
-        return self.rotation_matrix(mb_ang_w).T.dot(mb_vel_w)
-
-    def get_lidar_scan(self):
-        if self.valid_buffer_scan:
-            return self.last_scan
-        '''
-        Obtain lidar scan values for current state.
-
-        Returns:
-            list: Scan values for range and resolution specified in
-                params dict.
-        '''
-        scan_front = None
-        scan_rear = None
-
-
-        # Get pose of lidar
-        states = pb.getLinkState(self.robotId, self.lidarLinkId1,
-                                 False, False, self.clientId)
-        lidar_pos, lidar_ori = states[4:6]
-        lidar_pos = np.array(lidar_pos)
-        R = np.array(pb.getMatrixFromQuaternion(lidar_ori))
-        R = np.reshape(R, (3, 3))
-        scan_l1 = R.dot(self.rays[0]).T + lidar_pos
-        scan_h1 = R.dot(self.rays[1]).T + lidar_pos
-
-        # Get pose of lidar
-        states = pb.getLinkState(self.robotId, self.lidarLinkId2,
-                                 False, False, self.clientId)
-        lidar_pos, lidar_ori = states[4:6]
-        lidar_pos = np.array(lidar_pos)
-        R = np.array(pb.getMatrixFromQuaternion(lidar_ori))
-        R = np.reshape(R, (3, 3))
-        scan_l2 = R.dot(self.rays[0]).T + lidar_pos
-        scan_h2 = R.dot(self.rays[1]).T + lidar_pos
-
-        scan_l = np.concatenate((scan_l1, scan_l2))
-        scan_h = np.concatenate((scan_h1, scan_h2))
-
-        scan_r = pb.rayTestBatch(scan_l.tolist(), scan_h.tolist(),
-                                 self.clientId)
-
-        scan = [x[2]*self.p["sensors"]["lidar"]["range"] for x in scan_r]
-        scan_front = scan[:len(scan_l1)]
-        scan_rear = scan[len(scan_l1):]
-        self.last_scan = [scan_front, scan_rear]
-        self.valid_buffer_scan = True
-        return [scan_front, scan_rear]
-
-    def set_velocities(self, mb_vel_r, joint_vel):
-        '''
-        Applies velocities of move base and joints to the simulation.
-
-        Args:
-            mb_vel_r (numpy.array): Base velocities to apply (x, y, theta).
-            joint_vel (numpy.array): Joint velocities to apply. Length: 7.
-        '''
-        # Obtain robot orientation and transform mb vels to world frame
-        mb_link_state = pb.getLinkState(self.robotId, self.baseLinkId,
-                                        False, False, self.clientId)
-        mb_ang_w = pb.getEulerFromQuaternion(mb_link_state[5])[2]
-
-        mb_vel_w = self.rotation_matrix(mb_ang_w).dot(mb_vel_r)
-
-        # Apply velocities to simulation
-        vel_lin = np.append(mb_vel_w[0:2], 0.0)
-        vel_ang = np.append([0.0, 0.0], mb_vel_w[2])
-        pb.resetBaseVelocity(self.robotId, vel_lin, vel_ang, self.clientId)
-
-        pb.setJointMotorControlArray(self.robotId, self.joint_mapping,
-                                     pb.VELOCITY_CONTROL,
-                                     targetVelocities=joint_vel,
-                                     forces=len(joint_vel)*[1e10],
-                                     physicsClientId=self.clientId)
+        return self.robot.getBaseSPTransform(sp_pos_w, sp_ori_w)
 
     def check_joint_limits_reached(self):
         '''
@@ -534,22 +294,12 @@ class AslaugBaseEnv(gym.Env):
         Returns:
             bool: Any joint has reached its limit.
         '''
-        j_pos, _ = self.get_joint_states()
+        j_pos, _ = self.robot.getJointStates()
         filt = self.actuator_selection
         max_reached = (filt*((self.joint_limits[:, 1] - j_pos) <= 1e-3)).any()
         min_reached = (filt*((j_pos - self.joint_limits[:, 0]) <= 1e-3)).any()
 
         return min_reached or max_reached
-
-    def check_collision(self):
-        '''
-        Checks if robot collides with any body.
-
-        Returns:
-            bool: Whether robot is in collision or not.
-        '''
-        return len(pb.getContactPoints(bodyA=self.robotId,
-                                       physicsClientId=self.clientId)) > 0
 
     def close(self):
         '''
@@ -578,11 +328,11 @@ class AslaugBaseEnv(gym.Env):
                                            self.clientId)
         pb.resetBasePositionAndOrientation(self.markerId, pos_mk, ori_quat,
                                            self.clientId)
-        pb.stepSimulation(self.clientId)
+        self.stepSimulation()
         self.valid_buffer_scan = False
 
     def get_camera_pose(self):
-        state_mb = pb.getLinkState(self.robotId, self.baseLinkId,
+        state_mb = pb.getLinkState(self.robot.id, self.baseLinkId,
                                    False, False, self.clientId)
         mb_pos_w, mb_ori_w = state_mb[4:6]
         state_sp = pb.getLinkState(self.spId, self.spGraspLinkId,

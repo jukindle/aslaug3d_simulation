@@ -3,8 +3,7 @@ import numpy as np
 import pybullet as pb
 import random
 from . import aslaug_base
-import cv2
-from scipy.signal import convolve2d
+from .base.objects import AslaugRobot, AslaugKallax
 
 
 # Aslaug environment with automatic domain randomization, sensor noise,
@@ -15,7 +14,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
     def __init__(self, folder_name="", gui=False, free_cam=False,
                  recording=False, params=None, randomized_env=True):
         # Common params
-        version = "v121"
+        version = "v200"
         self.folder_name = folder_name
         self.soft_reset = False
         self.recording = recording
@@ -47,7 +46,8 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                 self.set_param(param, el["start"])
 
     def setup_action_observation_spaces(self):
-        self.calibrate_lidar()
+        # Calibrate lidar scan
+        self.robot.calibrate_lidar()
         # Define action space
         accel_lims_mb = self.p["base"]["acc_mag"]
         acc_lim_joints = (self.n_joints * [self.p["joints"]["acc_mag"]])
@@ -113,20 +113,20 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
             done = True
 
         # Reward: Collision
-        if self.check_collision():
+        if self.robot.isColliding():
             reward += self.p["reward"]["rew_collision"]
             info["done_reason"] = "collision"
             done = True
 
         # Reward: Safety margin
-        scan_ret = self.get_lidar_scan()
+        scan_ret = self.robot.getLidarScan()
         scan_cal = np.concatenate([x for x in self.scan_calib if x is not None])
         scan = np.concatenate([x for x in scan_ret if x is not None])
         min_val = np.min(scan-scan_cal)
         start_dis = self.p["reward"]["dis_lidar"]
         rew_lidar = self.p["reward"]["rew_lidar_p_m"]
         if min_val <= start_dis:
-            vel_norm = np.linalg.norm(self.get_base_vels()[:2])
+            vel_norm = np.linalg.norm(self.robot.getBaseVelocity()[:2])
             reward += rew_lidar*self.p["world"]["tau"]*(1-min_val/start_dis)*vel_norm
         # Reward: Base-to-setpoint orientation
         r_ang_sp = self.calculate_base_sp_angle()
@@ -154,28 +154,13 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                        * self.p["reward"]["fac_goal_dis_ang"] * delta_eucl_ang)
             self.last_eucl_ang = eucl_ang
 
-        # # Reward from optimal path
-        # dis_to_p, rem_dis = self.get_path_stats()
-        #
-        # delta_dtp = self.last_dis_to_path - dis_to_p
-        # delta_rem_dis = self.last_remaining_dis - rem_dis
-        #
-        # fac_dtp = self.p["reward"]["rew_path_dis_p_m"]
-        # fac_rem_dis = self.p["reward"]["rew_path_total"]
-        #
-        # reward += fac_dtp*delta_dtp
-        # reward += fac_rem_dis*delta_rem_dis/self.total_path_length
-        #
-        # self.last_dis_to_path = dis_to_p
-        # self.last_remaining_dis = rem_dis
-
         # Reward: Goal-hold
         # Replaced by EE velocity
-        ee_vels = self.get_ee_velocity()
+        ee_vels = self.robot.getEEVelocity()
         ee_speed = np.linalg.norm(ee_vels)
         if eucl_dis <= self.p["setpoint"]["tol_lin_mag"] and \
                 eucl_ang <= self.p["setpoint"]["tol_ang_mag"]:
-            ee_vels = self.get_ee_velocity()
+            ee_vels = self.getEEVelocity()
             ee_speed = np.linalg.norm(ee_vels)
             if self.last_ee_vel is None:
                 self.last_ee_vel = ee_speed
@@ -242,11 +227,11 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         sp_pose_ee[0:3] *= self.np_random.normal(1, std_lin, size=3)
         sp_pose_ee[3:6] *= self.np_random.normal(1, std_ang, size=3)
         sp_pose_ee = np.array((sp_pose_ee[0], sp_pose_ee[1], sp_pose_ee[5]))
-        link_pose_r = self.get_link_states(self.link_mapping)
-        j_pos, j_vel = self.get_joint_states(self.actuator_selection)
+        link_pose_r = self.robot.getLinkStates(self.link_mapping)
+        j_pos, j_vel = self.robot.getJointStates(self.actuator_selection)
 
         # Observation: Base velocities
-        mb_vel_w = self.get_base_vels()
+        mb_vel_w = self.robot.getBaseVelocity()
 
         # Add noise to base velocities
         std_lin = self.p["sensors"]["odometry"]["std_lin"]
@@ -255,7 +240,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         mb_vel_w[2:3] *= self.np_random.normal(1, std_ang, size=1)
 
         # Observation: Lidar
-        scan_ret = self.get_lidar_scan()
+        scan_ret = self.robot.getLidarScan()
         scan = np.concatenate([x for x in scan_ret if x is not None])
 
         # Add noise to lidar sensors
@@ -305,18 +290,12 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                       "joint_vel": np.array(7 * [0.0])}
 
         # Reset environment
-        up = self.p['joints']['static_act_noise_mag']
-        self.fixed_joint_states = (np.array(self.p["joints"]["init_states"])
-                                   + self.np_random.uniform(-up, up))
-        for i in range(len(self.joint_mapping)):
-            pb.resetJointState(self.robotId, self.joint_mapping[i],
-                               self.fixed_joint_states[i],
-                               0.0, self.clientId)
+        self.robot.resetFixedJoints()
 
         self.possible_sp_pos = self.randomize_environment()
 
         # Reset robot base
-        pb.resetBaseVelocity(self.robotId, [0, 0, 0], [0, 0, 0], self.clientId)
+        self.robot.setBaseVelocity([0, 0, 0])
 
         # Reset setpoint
         sp_pos = self.reset_setpoint()
@@ -324,7 +303,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         # Reset robot arm
         collides = True
         n_tries = 0
-        pb.stepSimulation(self.clientId)
+        self.stepSimulation()
         err_c = 0
         while collides:
             n_tries += 1
@@ -389,21 +368,15 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
             T_0si[0:2, 2] = -T_0si[0:2, 0:2].dot(T_0s[0:2, 2])
             T_w0 = T_ws.dot(np.linalg.inv(T_0s))
 
-            robot_pos = (T_w0[0, 2], T_w0[1, 2], 0.08)
-            robot_init_yaw = ang_base
-            robot_ori = pb.getQuaternionFromEuler([0, 0,
-                                                   robot_init_yaw])
-            pb.resetBasePositionAndOrientation(self.robotId, robot_pos,
-                                               robot_ori, self.clientId)
+            pose2d = [T_w0[0, 2], T_w0[1, 2], robot_init_yaw]
+            self.robot.moveObject2D(pose2d, z=0.08)
 
-            pb.resetJointState(self.robotId, self.joint_mapping[0],
-                               j1, 0.0, self.clientId)
-            pb.resetJointState(self.robotId, self.joint_mapping[3],
-                               j4, 0.0, self.clientId)
+            self.robot.setJointState(0, j1)
+            self.robot.setJointState(3, j4)
 
-            pb.stepSimulation(self.clientId)
-            self.valid_buffer_scan = False
-            collides = self.check_collision()
+            self.stepSimulation()
+
+            collides = self.robot.isColliding()
             collides = (collides or robot_pos[0] < 0
                         or robot_pos[0] > self.corridor_length
                         or robot_pos[1] < 0
@@ -428,6 +401,11 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         if err_c >= 10:
             print("AGENT FREED! Whoow")
         return obs
+
+
+    def stepSimulation(self):
+        pb.stepSimulation(self.clientId)
+        self.robot.valid_buffer_scan = False
 
     def reset_setpoint(self, max_dis=None):
         # Spawn random setpoint
@@ -472,19 +450,12 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
 
     def spawn_robot(self):
         # Spawn robot
-        robot_pos = [0, 0, 10]
-        robot_ori = pb.getQuaternionFromEuler([0, 0, 0])
-        model_path = 'urdf/robot/mopa/mopa.urdf'
-        robot_id = pb.loadURDF(model_path, robot_pos, robot_ori,
-                               useFixedBase=True,
-                               physicsClientId=self.clientId,
-                               flags=pb.URDF_USE_SELF_COLLISION|pb.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS)
+        self.robot = AslaugRobot(self.clientId)
 
         # Disable panda base collision
         pairs = [("camera_rack", x) for x in ["panda_hand", "panda_leftfinger", "panda_rightfinger", "panda_link5", "panda_link6", "panda_link7"]]
-        self.configure_self_collisions(robot_id, pairs)
+        self.robot.setupSelfCollisions(pairs)
 
-        return robot_id
 
     def configure_ext_collisions(self, bodyExt, body, enabled_links):
         for j in range(pb.getNumJoints(body, physicsClientId=self.clientId)):
@@ -493,7 +464,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
             idx_j = info_j[0]
 
             enabled = link_name_j in enabled_links
-    
+
             pb.setCollisionFilterPair(body, bodyExt, idx_j, -1, enabled,
                                       self.clientId)
             for k in range(pb.getNumJoints(bodyExt, physicsClientId=self.clientId)):
@@ -502,23 +473,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                 pb.setCollisionFilterPair(body, bodyExt, idx_j, idx_k, enabled,
                                           self.clientId)
 
-    def configure_self_collisions(self, body, enabled_pairs):
-        pairs = ["{}|{}".format(x, y) for x, y in enabled_pairs]
-        for j in range(pb.getNumJoints(body, physicsClientId=self.clientId)):
-            info_j = pb.getJointInfo(body, j, physicsClientId=self.clientId)
-            link_name_j = info_j[12].decode("utf-8")
-            idx_j = info_j[0]
 
-            for k in range(pb.getNumJoints(body, physicsClientId=self.clientId)):
-                info_k = pb.getJointInfo(body, k, physicsClientId=self.clientId)
-                link_name_k = info_k[12].decode("utf-8")
-                idx_k = info_k[0]
-
-                s1 = "{}|{}".format(link_name_j, link_name_k)
-                s2 = "{}|{}".format(link_name_k, link_name_j)
-                enabled = s1 in pairs or s2 in pairs
-                pb.setCollisionFilterPair(body, body, idx_j, idx_k, enabled,
-                                          self.clientId)
 
     def set_collisionpair(self, bodyA, bodyB, linknameA, linknameB, collision):
         linkA = None
@@ -737,14 +692,6 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                                       self.clientId)
             pb.setCollisionFilterPair(self.human.leg_r, id, -1, -1, False,
                                       self.clientId)
-        # pb.setCollisionFilterPair(self.human.leg_l, self.bookcaseIds[0],
-        #                           -1, -1, False, self.clientId)
-        # pb.setCollisionFilterPair(self.human.leg_l, self.bookcaseIds[1],
-        #                           -1, -1, False, self.clientId)
-        # pb.setCollisionFilterPair(self.human.leg_r, self.bookcaseIds[0],
-        #                           -1, -1, False, self.clientId)
-        # pb.setCollisionFilterPair(self.human.leg_r, self.bookcaseIds[1],
-        #                           -1, -1, False, self.clientId)
         return ids
 
     def calculate_goal_distance(self):
@@ -772,13 +719,11 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         '''
         model_path = 'urdf/kallax/kallax_large_easy.urdf'
 
-        kallax1 = pb.loadURDF(model_path, [1.47 / 2 + 4.0, 0, 0],
-                              useFixedBase=True, physicsClientId=self.clientId)
-        kallax2 = pb.loadURDF(model_path, [1.47 / 2 + 12.0, 0, 0],
-                              useFixedBase=True, physicsClientId=self.clientId)
-        self.configure_ext_collisions(kallax1, self.robotId, self.collision_links)
-        self.configure_ext_collisions(kallax2, self.robotId, self.collision_links)
-        self.bookcaseIds = [kallax1, kallax2]
+        kallax1 = AslaugKallax([4.735, 0, 0], clientId=self.clientId)
+        kallax2 = AslaugKallax([12.735, 0, 0], clientId=self.clientId)
+        kallax1.setupCollisions(self.robot.id, self.collision_links)
+        kallax2.setupCollisions(self.robot.id, self.collision_links)
+        self.bookcases = [kallax1, kallax2]
 
     def move_object(self, id, pose2d):
         pos = [pose2d[0], pose2d[1], 0.0]
@@ -790,126 +735,26 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         Rt = self.rotation_matrix(pose2d[2]).T
         return np.array(pos), Rt
 
-    def move_bookcase(self, bookcaseId, pose2d, sp_layers=[0, 1, 2, 3]):
-        '''
-        Function which moves a bookcase to a new position and returns a list of
-        possible setpoint locations w.r.t. the new position.
-
-        Args:
-            bookcaseId (int): ID of bookcase.
-            pose2d (numpy.array): 2D pose to which bookcase should be moved to.
-            sp_layers (list): Selection specifying in what layers the setpoint
-                might be spawned. 0 means lowest and 3 top layer.
-        Returns:
-            list: 3D positions of possible setpoint locations w.r.t. pose2d.
-        '''
-        pos, Rt = self.move_object(bookcaseId, pose2d)
-
-        # Sample possible setpoint positions
-        sp_pos = []
-        p_noise = self.p['setpoint']['noise']
-        for l in sp_layers:
-            z = 0.037 + (0.33 + 0.025) * l
-            y = 0.195
-            # for dx in [+0.1775, -0.1775, +0.5325, -0.5325]:
-            dx = 0.0
-            pos_i = pos + Rt.dot(np.array([dx, y, z]))
-            nx = self.np_random.uniform(*p_noise['range_x'])
-            ny = self.np_random.uniform(*p_noise['range_y'])
-            nz = self.np_random.uniform(*p_noise['range_z'])
-
-            pos_i += np.array((nx, ny, nz))
-            sp_pos.append(pos_i)
-
-        return sp_pos
-
     def randomize_environment(self, force_new_env=False):
         if force_new_env or \
                 self.np_random.uniform() <= self.p["world"]["prob_new_env"]:
             for id in self.additionalIds:
                 pb.removeBody(id, physicsClientId=self.clientId)
             self.additionalIds = self.spawn_additional_objects()
+
         # Randomize bookcases
         layers = self.p["setpoint"]["layers"]
+        p_noise = self.p['setpoint']['noise']
         possible_sp_pos = []
-        pos = [1.47 / 2 + 4, 0, 0]
-        possible_sp_pos += self.move_bookcase(self.bookcaseIds[0], pos,
-                                              sp_layers=layers)
-        pos = [1.47 / 2 + 12, 0, 0]
-        possible_sp_pos += self.move_bookcase(self.bookcaseIds[1], pos,
-                                              sp_layers=layers)
+        for bookcase in self.bookcases:
+            poses = bookcase.sampleSetpointPoses(10, p_noise['range_x'],
+                                                 p_noise['range_y'],
+                                                 p_noise['range_z'],
+                                                 layers=layers)
+            possible_sp_pos.append(poses)
 
         return possible_sp_pos
 
-    def calibrate_lidar(self):
-        robot_pos = [0, 0, 10]
-        robot_ori = pb.getQuaternionFromEuler([0, 0, 0])
-        model_path = 'urdf/calibration/ridgeback_lidar_calib.urdf'
-        calib_id = pb.loadURDF(model_path, robot_pos, robot_ori,
-                               useFixedBase=True,
-                               physicsClientId=self.clientId)
-        robot_pos = (0, 0, 10)
-        robot_ori = pb.getQuaternionFromEuler([0, 0, 0])
-        pb.resetBasePositionAndOrientation(self.robotId, robot_pos, robot_ori,
-                                           self.clientId)
-        pb.stepSimulation(self.clientId)
-        scan_ret = self.get_lidar_scan()
-        self.scan_calib = scan_ret
-        pb.removeBody(calib_id, self.clientId)
-        return scan_ret
-
-    def get_lidar_calibration(self):
-        if self.scan_calib is None:
-            return self.calibrate_lidar()
-        else:
-            return self.scan_calib
-
-    def get_ee_pose(self):
-        state_ee = pb.getLinkState(self.robotId, self.eeLinkId,
-                                   False, False, self.clientId)
-        ee_pos_w, ee_ori_w = state_ee[4:6]
-        return ee_pos_w, ee_ori_w
-
-    def generate_occmap_path(self):
-        self.path = np.zeros(1)
-        self.last_dis_to_path = 0
-        self.total_path_length = 1
-        self.last_remaining_dis = 0
-
-    def get_path_stats(self):
-        return 0, 0
-
-    def get_nearest_point_on_line(self, pts_l, pt):
-        x1, y1 = pts_l[0, :]
-        x2, y2 = pts_l[1, :]
-        x3, y3 = pt
-
-        a1, a2 = x2-x1, y2-y1
-        if a2 == 0:
-            a2 = 1e-3
-        anorm = np.sqrt(a1**2 + a2**2)
-        a1, a2 = a1 / anorm, a2 / anorm
-
-        n1, n2 = 1, -a1/a2
-
-        divid = (n2/n1*a1-a2)
-        if divid == 0:
-            divid = 1e-3
-        t = (n2/n1*(x3-x1)+y1-y3) / divid
-        t = max(0, min(1, t))
-
-        o1, o2 = x1+t*a1, y1+t*a2
-
-        dis = np.sqrt((o1-x3)**2 + (o2-y3)**2)
-        return [o1, o2], dis
-
-    def path_length_from_index(self, idx):
-        if idx >= self.path.shape[0] - 1:
-            return 0.0
-
-        vecs = self.path[(idx+1):, :] - self.path[idx:-1, :]
-        diss = np.linalg.norm(vecs, axis=1)
-        return np.sum(diss)
 
 
 class SpawnGrid:
@@ -979,214 +824,3 @@ class EnvScore:
         numnonnan = np.count_nonzero(~np.isnan(self.score_buffer))
         resp = nansum / numnonnan
         return 0 if np.isnan(resp) else resp
-
-
-class OccupancyMap:
-    def __init__(self, x_l, x_u, y_l, y_u, res):
-        self.x_l, self.x_u, self.y_l, self.y_u = x_l, x_u, y_l, y_u
-        self.res = res
-        self.w_obj = -3
-        self.w_sp = 1
-        self.original_map = None
-        self.reset()
-
-    def add_rect(self, pos, dx, dy):
-        p_u = self.coord_to_idx([pos[0]+dx/2.0, pos[1]+dy/2.0])
-        p_l = self.coord_to_idx([pos[0]-dx/2.0, pos[1]-dy/2.0])
-        self.map[p_l[0]:p_u[0], p_l[1]:p_u[1]] = self.w_obj
-
-    def set_sp(self, pos, tol_radius=0.2):
-        if self.original_map is None:
-            self.original_map = self.map.copy()
-
-        self.map = self.original_map.copy()
-        self.add_sp(pos, tol_radius)
-
-    def add_sp(self, pos, tol_radius=0.2):
-        pos_idx = self.coord_to_idx(pos)
-
-        tol_l = self.coord_to_idx([pos[0]-tol_radius, pos[1]-tol_radius])
-        tol_u = self.coord_to_idx([pos[0]+tol_radius, pos[1]+tol_radius])
-        self.map[tol_l[0]:tol_u[0], tol_l[1]:tol_u[1]] = 0
-        self.map[pos_idx[0], pos_idx[1]] = self.w_sp
-        self.pos_sp = pos
-        self.idx_sp = pos_idx
-
-    def generate_path(self, pos, n_its=5000):
-        harm = self.find_harmonic_field_fast(self.idx_sp, self.coord_to_idx(pos), n_its)
-        path, path_idx = self.find_path(harm, pos)
-        #self.visualize_path(path_idx, harm)
-        return path, path_idx
-
-    def find_harmonic_field(self, n_its=5000):
-        harm = self.map.copy()
-        obj_sel = self.map == self.w_obj
-        sp_sel = self.map == self.w_sp
-
-        kernel = np.ones((3, 3))/8.0
-        kernel[1, 1] = 0
-        harm_last = harm.copy()
-        for i in range(n_its):
-            harm = convolve2d(harm, kernel, mode='same')
-
-            harm[obj_sel] = self.w_obj
-            harm[sp_sel] = self.w_sp
-
-            diff = np.linalg.norm(harm-harm_last)
-            if diff < 1e-9:
-                break
-            harm_last = harm.copy()
-
-        return harm
-
-    def find_harmonic_field_fast(self, idx_init, idx_sp, n_its=5000):
-        harm_original = self.map.copy()
-        harm = self.map.copy()
-
-        kernel = np.ones((3, 3))/8.0
-        kernel[1, 1] = 0
-
-        margin = 1.0
-        left_cut_idx = min(idx_init[0], idx_sp[0])
-        left_cut_idx = int(round(max(0, left_cut_idx-margin*self.res)))
-        right_cut_idx = max(idx_init[0], idx_sp[0])
-        right_cut_idx = int(round(min(harm.shape[0], right_cut_idx+margin*self.res)))
-
-        harm = harm[left_cut_idx:right_cut_idx, :]
-        harm[0, :] = self.w_obj
-        harm[-1, :] = self.w_obj
-
-        harm_last = harm.copy()
-
-        obj_sel = harm_last == self.w_obj
-        sp_sel = harm_last == self.w_sp
-        for i in range(n_its):
-            harm = convolve2d(harm, kernel, mode='same')
-
-            harm[obj_sel] = self.w_obj
-            harm[sp_sel] = self.w_sp
-
-            diff = np.linalg.norm(harm-harm_last)
-            if diff < 1e-9:
-                break
-            harm_last = harm.copy()
-
-        harm_original[:, :] = self.w_obj
-        harm_original[left_cut_idx:right_cut_idx, :] = harm
-        return harm_original
-
-    def find_path(self, harm, pos):
-        x, y = self.coord_to_idx(pos)
-        dirs = [(1, 0), (-1, 0), (0, 1), (0, -1),
-                (1, 1), (1, -1), (-1, 1), (-1, -1)]
-
-        path = [pos]
-        path_px = [[x, y]]
-        for i in range(int(self.res*(self.x_u-self.x_l)*10)):
-            values = []
-            for dir in dirs:
-                if (x+dir[0] < harm.shape[0]-1 and x-dir[0] > 0
-                        and y+dir[1] < harm.shape[1]-1 and y-dir[1] > 0):
-                    values.append(harm[x+dir[0], y+dir[1]])
-                else:
-                    values.append([-np.inf])
-            best_dir = dirs[np.argmax(values)]
-            x, y = x + best_dir[0], y + best_dir[1]
-            path.append(self.idx_to_coord([x, y]))
-            path_px.append([x, y])
-
-            if self.idx_sp[0] == x and self.idx_sp[1] == y:
-                break
-        path[-1] = self.pos_sp[0:2]
-        return path, path_px
-
-    def visualize_path(self, path_idx, harm=None):
-        if harm is None:
-            map = self.map.copy()
-        else:
-            map = harm.copy()
-        for idx in path_idx:
-            map[idx[0], idx[1]] = self.w_sp
-        map[self.idx_sp[0], self.idx_sp[1]] = 1
-        self.visualize(map)
-
-    def visualize(self, map):
-        max_v = np.max(map)
-        min_v = np.min(map)
-        img_viz = ((map-min_v)/(max_v-min_v)*254.0).astype(np.uint8)
-
-        scl = int(1500/img_viz.shape[0])
-        width = int(img_viz.shape[1] * scl)
-        img_viz = cv2.resize(img_viz, (width, 1500),
-                             interpolation=cv2.INTER_NEAREST)
-        img_viz = np.flip(img_viz.T, axis=0)
-        img_viz = cv2.cvtColor(img_viz, cv2.COLOR_BGR2RGB)
-        print(img_viz)
-        cv2.imshow("Occupancy map", img_viz)
-        cv2.waitKey()
-
-    def reset(self):
-        n_x = int(round(self.res*(self.x_u-self.x_l)))+2
-        n_y = int(round(self.res*(self.y_u-self.y_l)))+2
-        self.map = np.zeros((n_x, n_y), dtype=float)
-        self.map[0, :] = self.w_obj
-        self.map[-1, :] = self.w_obj
-        self.map[:, 0] = self.w_obj
-        self.map[:, -1] = self.w_obj
-
-    def coord_to_idx(self, pos):
-        idx_x = self.res*(pos[0]-self.x_l) + 1
-        idx_y = self.res*(pos[1]-self.y_l) + 1
-
-        idx_x = max(1, min(self.map.shape[0]-1, idx_x))
-        idx_y = max(1, min(self.map.shape[1]-1, idx_y))
-
-        return int(round(idx_x)), int(round(idx_y))
-
-    def idx_to_coord(self, idx):
-        coord_x = (idx[0]-1)/self.res+self.x_l
-        coord_y = (idx[1]-1)/self.res+self.y_l
-
-        return coord_x, coord_y
-
-
-
-class OccupancyMapGhost:
-    def __init__(self, x_l, x_u, y_l, y_u, res):
-        return
-
-    def add_rect(self, pos, dx, dy):
-        return
-    def set_sp(self, pos, tol_radius=0.2):
-        return
-    def add_sp(self, pos, tol_radius=0.2):
-        return
-    def generate_path(self, pos, n_its=5000):
-        harm = self.find_harmonic_field_fast(self.idx_sp, self.coord_to_idx(pos), n_its)
-        path, path_idx = self.find_path(harm, pos)
-        #self.visualize_path(path_idx, harm)
-        return path, path_idx
-
-    def find_harmonic_field(self, n_its=5000):
-        return Nine
-
-    def find_harmonic_field_fast(self, idx_init, idx_sp, n_its=5000):
-        return None
-
-    def find_path(self, harm, pos):
-        return None, None
-
-    def visualize_path(self, path_idx, harm=None):
-        return
-
-    def visualize(self, map):
-        return
-
-    def reset(self):
-        return
-
-    def coord_to_idx(self, pos):
-        return 0, 0
-
-    def idx_to_coord(self, idx):
-        return 0, 0
