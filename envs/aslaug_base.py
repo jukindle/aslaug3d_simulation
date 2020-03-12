@@ -117,13 +117,16 @@ class AslaugBaseEnv(gym.Env):
                                    self.fixed_joint_states[i], 0.0,
                                    self.clientId)
 
-        human_done = self.human.step()
-        if human_done:
-            h_s_x = self.np_random.uniform(self.sp_init_pos[0]-7.5, self.sp_init_pos[0]+7.5)
-            h_s_y = self.np_random.uniform(-0.5, self.corridor_width+0.5)
-            h_e_x = self.np_random.uniform(self.sp_init_pos[0]-7.5, self.sp_init_pos[0]+7.5)
-            h_e_y = self.np_random.uniform(-0.5, self.corridor_width+0.5)
-            self.human.set_start_end([h_s_x, h_s_y], [h_e_x, h_e_y])
+
+        for human in self.humans:
+            human_done = human.step()
+            if human_done:
+                h_s_x = self.np_random.uniform(self.sp_init_pos[0]-7.5, self.sp_init_pos[0]+7.5)
+                h_s_y = self.np_random.uniform(-0.5, self.corridor_width+0.5)
+                h_e_x = self.np_random.uniform(self.sp_init_pos[0]-7.5, self.sp_init_pos[0]+7.5)
+                h_e_y = self.np_random.uniform(-0.5, self.corridor_width+0.5)
+                human.set_start_end([h_s_x, h_s_y], [h_e_x, h_e_y])
+                human.setEnabled(self.np_random.uniform() <= self.p['world']['p_spawn_human'])
         # Execute one step in simulation
         pb.stepSimulation(self.clientId)
         self.valid_buffer_scan = False
@@ -226,8 +229,8 @@ class AslaugBaseEnv(gym.Env):
         pb.configureDebugVisualizer(pb.COV_ENABLE_RGB_BUFFER_PREVIEW, 0)
         pb.setPhysicsEngineParameter(enableFileCaching=0)
 
-        # Setup human
-        self.human = Human(self.clientId, self.tau)
+        # Setup humans
+        self.humans = [Human(self.clientId, self.tau) for _ in range(self.p['world']['n_humans'])]
 
         # Spawn robot
         self.robotId = self.spawn_robot()
@@ -307,8 +310,9 @@ class AslaugBaseEnv(gym.Env):
 
         self.rays = (r_from, r_to)
 
-        self.configure_ext_collisions(self.human.leg_l, self.robotId, self.collision_links)
-        self.configure_ext_collisions(self.human.leg_r, self.robotId, self.collision_links)
+        for human in self.humans:
+            self.configure_ext_collisions(human.leg_l, self.robotId, self.collision_links)
+            self.configure_ext_collisions(human.leg_r, self.robotId, self.collision_links)
 
     def seed(self, seed=None):
         '''
@@ -672,15 +676,17 @@ class AslaugBaseEnv(gym.Env):
                 return False
         return obj
 
+
 class Human:
     def __init__(self, clientId, tau, vel_range=[0.05, 0.15],
-                 leg_dis_range=[0.2, 0.4], step_length_range=[0.5, 0.7]):
+                 leg_dis_range=[0.1, 0.4], step_length_range=[0.3, 0.7]):
         self.clientId = clientId
         self.vel_range = vel_range
         self.leg_dis_range = leg_dis_range
         self.step_len_range = step_length_range
         self.tau = tau
         self.T = 0.0
+        self.enabled = True
 
         self.v_l, self.v_r = lambda x: 0, lambda x: 0
 
@@ -692,7 +698,6 @@ class Human:
         self.leg_r = pb.loadURDF(model_path,
                                  useFixedBase=True,
                                  physicsClientId=self.clientId)
-
 
     def set_start_end(self, start_pos, end_pos):
         self.start_pos = np.array(start_pos)
@@ -726,6 +731,11 @@ class Human:
         self.T_max = np.linalg.norm(self.end_pos - self.start_pos)/self.vel
 
     def step(self):
+        if not self.enabled:
+            if self.T >= self.T_max:
+                return True
+            else:
+                return False
         v_l = self.v_l(self.T)*self.n_dir
         v_r = self.v_r(self.T)*self.n_dir
 
@@ -738,3 +748,15 @@ class Human:
 
         if self.T >= self.T_max:
             return True
+        else:
+            return False
+
+    def setEnabled(self, enabled):
+        self.enabled = enabled
+        if not self.enabled:
+            pb.resetBasePositionAndOrientation(self.leg_r,
+                                               [0, 0, 100], [0, 0, 0, 1],
+                                               physicsClientId=self.clientId)
+            pb.resetBasePositionAndOrientation(self.leg_l,
+                                               [0, 0, 100], [0, 0, 0, 1],
+                                               physicsClientId=self.clientId)

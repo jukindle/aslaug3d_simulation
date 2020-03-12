@@ -5,7 +5,7 @@
     "ent_coef": 0.003760312514286235,
     "gamma": 0.999,
     "lam": 0.8,
-    "learning_rate": [0.0005, 0.0001, 0.995, 0.2],
+    "learning_rate": [0.00025, 0.0002, 0.995, 0.2],
     "n_steps": 2048,
     "nminibatches": 8,
     "noptepochs": 30
@@ -35,10 +35,10 @@
       "fac_base_sp_ang": 0,
 
       "rew_path_dis_p_m": 10,
-      "rew_path_total": 30,
+      "rew_path_total": 50,
 
 
-      "fac_goal_dis_lin": 30,
+      "fac_goal_dis_lin": 0,
       "fac_sp_hold": 20,
       "fac_sp_hold_near": 40,
       "rew_collision": -60,
@@ -46,18 +46,14 @@
       "rew_joint_limits": -20,
       "rew_timeout": -15,
       "dis_lidar": 0.3,
-      "rew_lidar_p_m": -1,
-
-
-      "ee_vel_target_reduction": 20,
-      "ee_vel_limit": 0.02
+      "rew_lidar_p_m": -1
     },
     "sensors": {
       "lidar": {
         "ang_mag": 2.0944,
         "link_id1": "front_laser",
         "link_id2": "rear_laser",
-        "n_scans": 101,
+        "n_scans": 201,
         "range": 5,
         "noise": {
           "mean": 0.0,
@@ -78,7 +74,7 @@
       "continious_mode": true,
       "hold_time": 1.5,
       "tol_ang_mag": 3.141592,
-      "tol_lin_mag": 0.045,
+      "tol_lin_mag": 0.0425,
       "2D_locked": true,
       "layers": [3],
       "noise": {
@@ -107,24 +103,19 @@
         "res": 8
       },
 
-
-      "spawn_range": 7.5,
-
-
-      "spawn_range_x": 7.5,
+      "spawn_range_x": 8.0,
       "action_discretization": 5,
       "size": 20,
       "tau": 0.04,
-      "timeout": 120
+      "timeout": 120,
+      "n_humans": 2,
+      "p_spawn_human": 0.0
     },
     "adr": {
-      "success_threshold": 0.7,
+      "success_threshold": 0.63,
       "fail_threshold": 0.1,
       "batch_size": 5,
       "adaptions": [
-        [
-          {"param": "world.spawn_range", "start": 3.5, "end": 7.5, "steps": 10}
-        ]
       ]
 
     }

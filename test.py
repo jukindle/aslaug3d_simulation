@@ -1,5 +1,5 @@
 import time
-from envs.aslaug_v3 import AslaugEnv
+from envs.aslaug_v12easy import AslaugEnv
 
 
 N = 100000000

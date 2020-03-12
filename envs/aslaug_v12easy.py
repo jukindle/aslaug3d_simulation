@@ -330,6 +330,15 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         self.occmap.set_sp(sp_pos)
         self.generate_occmap_path()
         self.reset_setpoint_normalization()
+
+        # Initialize human poses
+        for human in self.humans:
+            h_s_x = self.np_random.uniform(self.sp_init_pos[0]-7.5, self.sp_init_pos[0]+7.5)
+            h_s_y = self.np_random.uniform(-0.5, self.corridor_width+0.5)
+            h_e_x = self.np_random.uniform(self.sp_init_pos[0]-7.5, self.sp_init_pos[0]+7.5)
+            h_e_y = self.np_random.uniform(-0.5, self.corridor_width+0.5)
+            human.set_start_end([h_s_x, h_s_y], [h_e_x, h_e_y])
+            human.setEnabled(self.np_random.uniform() <= self.p['world']['p_spawn_human'])
         # Calculate observation and return
         obs = self.calculate_observation()
         self.last_yaw = None
@@ -624,6 +633,12 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
             pos -= np.array((shlf_l_i+sgap_l_i, 0, 0))
             self.configure_ext_collisions(id, self.robotId, self.collision_links)
 
+        for id in ids:
+            for human in self.humans:
+                pb.setCollisionFilterPair(human.leg_l, id, -1, -1, False,
+                                          self.clientId)
+                pb.setCollisionFilterPair(human.leg_r, id, -1, -1, False,
+                                          self.clientId)
         # print(sg.matrix1)
         # print(sg.matrix0)
         # import matplotlib.pyplot as plt

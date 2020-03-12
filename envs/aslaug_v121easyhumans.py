@@ -334,11 +334,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
                     print("Agent stuck...")
                 self.randomize_environment(force_new_env=True)
 
-                h_s_x = self.np_random.uniform(self.sp_init_pos[0]-7.5, self.sp_init_pos[0]+7.5)
-                h_s_y = self.np_random.uniform(-0.5, self.corridor_width+0.5)
-                h_e_x = self.np_random.uniform(self.sp_init_pos[0]-7.5, self.sp_init_pos[0]+7.5)
-                h_e_y = self.np_random.uniform(-0.5, self.corridor_width+0.5)
-                self.human.set_start_end([h_s_x, h_s_y], [h_e_x, h_e_y])
+
 
 
                 n_tries = 0
@@ -416,11 +412,16 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         self.generate_occmap_path()
         self.reset_setpoint_normalization()
 
-        h_s_x = self.np_random.uniform(self.sp_init_pos[0]-7.5, self.sp_init_pos[0]+7.5)
-        h_s_y = self.np_random.uniform(-0.5, self.corridor_width+0.5)
-        h_e_x = self.np_random.uniform(self.sp_init_pos[0]-7.5, self.sp_init_pos[0]+7.5)
-        h_e_y = self.np_random.uniform(-0.5, self.corridor_width+0.5)
-        self.human.set_start_end([h_s_x, h_s_y], [h_e_x, h_e_y])
+
+
+        # Initialize human poses
+        for human in self.humans:
+            h_s_x = self.np_random.uniform(self.sp_init_pos[0]-7.5, self.sp_init_pos[0]+7.5)
+            h_s_y = self.np_random.uniform(-0.5, self.corridor_width+0.5)
+            h_e_x = self.np_random.uniform(self.sp_init_pos[0]-7.5, self.sp_init_pos[0]+7.5)
+            h_e_y = self.np_random.uniform(-0.5, self.corridor_width+0.5)
+            human.set_start_end([h_s_x, h_s_y], [h_e_x, h_e_y])
+            human.setEnabled(self.np_random.uniform() <= self.p['world']['p_spawn_human'])
         # Calculate observation and return
         obs = self.calculate_observation()
         self.last_yaw = None
@@ -493,7 +494,7 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
             idx_j = info_j[0]
 
             enabled = link_name_j in enabled_links
-    
+
             pb.setCollisionFilterPair(body, bodyExt, idx_j, -1, enabled,
                                       self.clientId)
             for k in range(pb.getNumJoints(bodyExt, physicsClientId=self.clientId)):
@@ -733,10 +734,11 @@ class AslaugEnv(aslaug_base.AslaugBaseEnv):
         # plt.show()
 
         for id in ids:
-            pb.setCollisionFilterPair(self.human.leg_l, id, -1, -1, False,
-                                      self.clientId)
-            pb.setCollisionFilterPair(self.human.leg_r, id, -1, -1, False,
-                                      self.clientId)
+            for human in self.humans:
+                pb.setCollisionFilterPair(human.leg_l, id, -1, -1, False,
+                                          self.clientId)
+                pb.setCollisionFilterPair(human.leg_r, id, -1, -1, False,
+                                          self.clientId)
         # pb.setCollisionFilterPair(self.human.leg_l, self.bookcaseIds[0],
         #                           -1, -1, False, self.clientId)
         # pb.setCollisionFilterPair(self.human.leg_l, self.bookcaseIds[1],
@@ -1168,7 +1170,7 @@ class OccupancyMapGhost:
         return path, path_idx
 
     def find_harmonic_field(self, n_its=5000):
-        return Nine
+        return None
 
     def find_harmonic_field_fast(self, idx_init, idx_sp, n_its=5000):
         return None

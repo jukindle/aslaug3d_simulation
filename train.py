@@ -3,6 +3,7 @@ from stable_baselines import PPO2
 from millify import millify
 import numpy as np
 
+import sys
 from importlib import import_module
 import argparse
 import os
@@ -100,6 +101,11 @@ def main():
             print("Can't understand your expression.")
             exit()
 
+
+    # SAVE COMMAND TO FILE
+    text_file = open(os.path.join(dir_path, 'cmd.txt'), "w")
+    n = text_file.write(" ".join(sys.argv))
+    text_file.close()
     # Prepare curriculum learning
     if cl is not None:
         cl_list = []
