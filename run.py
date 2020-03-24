@@ -6,7 +6,7 @@ from importlib import import_module
 import argparse
 import numpy as np
 import os
-import json
+import yaml
 import shutil
 import inspect
 
@@ -54,11 +54,11 @@ class EnvRunner:
 
         aslaug2d_mod = import_module(mod_path)
 
-        param_path = mod_file_path + "/params.json"
+        param_path = mod_file_path + "/params.yaml"
         params = None
         if os.path.exists(param_path):
             with open(param_path) as f:
-                params = json.load(f)["environment_params"]
+                params = yaml.load(f)["environment_params"]
         # Load env
         recording = record_video is not False
         if "params" in inspect.getargspec(aslaug2d_mod.AslaugEnv).args:
@@ -124,14 +124,14 @@ class EnvRunner:
                 ep_id = self.env.episode_id
                 self.env.save_world(self.vid_n, prefix, infix, ep_id)
 
-                fn = "{}.video.{}.video{:06}.obs_acts.json".format(prefix,
+                fn = "{}.video.{}.video{:06}.obs_acts.yaml".format(prefix,
                                                                    infix,
                                                                    ep_id)
                 obs_act_path = os.path.join(self.vid_n, fn)
                 data = {"observations": self.obs_list,
                         "actions": self.act_list}
                 with open(obs_act_path, 'w') as f:
-                    json.dump(data, f)
+                    yaml.dump(data, f)
 
     def reset(self, init_state=None, init_setpoint_state=None,
               init_obstacle_grid=None, init_ol=None):
@@ -195,78 +195,6 @@ class EnvRunner:
     def close(self):
         self.env.close()
 
-
-class EnvComparer:
-    def __init__(self, version, folder_1, folder_2, episode=False,
-                 record_video=False, deterministic=False):
-        self.version = version
-        self.folder_1 = folder_1
-        self.folder_2 = folder_2
-        self.episode = episode
-        self.record_video = record_video
-        self.deterministic = deterministic
-        self.create_envs()
-
-    def create_envs(self):
-        self.env1 = EnvRunner(self.version, episode=self.episode,
-                              folder=self.folder_1,
-                              record_video=self.record_video,
-                              deterministic=self.deterministic)
-        self.env2 = EnvRunner(self.version, episode=self.episode,
-                              folder=self.folder_2,
-                              record_video=self.record_video,
-                              deterministic=self.deterministic)
-
-    def run_n_episodes(self, n_episodes=1):
-        for episode in range(n_episodes):
-            print("Running episode {}.".format(episode+1))
-            self.reset()
-            self.done = False
-            while not self.done:
-                ts = time.time()
-                self.step()
-                if not self.record_video:
-                    self.render()
-                dt = time.time()-ts
-                if 0.02 - dt > 0:
-                    time.sleep(0.02 - dt)
-
-    def reset(self):
-        self.env1.reset()
-        if self.record_video:
-            env1 = self.env1.env.env
-        else:
-            env1 = self.env1.env
-        state = env1.state.copy()
-        setpoint_state = env1.setpoint_state.copy()
-        obstacle_grid = env1.obstacle_grid.copy()
-        obstacle_locations = env1.obstacle_locations.copy()
-        self.env2.reset(init_state=state, init_setpoint_state=setpoint_state,
-                        init_obstacle_grid=obstacle_grid,
-                        init_ol=obstacle_locations)
-        # env2.state = env1.state.copy()
-        # env2.setpoint_state = env1.setpoint_state.copy()
-        # env2.obstacle_locations = env1.obstacle_locations.copy()
-        # env2.obstacle_grid = env1.obstacle_grid.copy()
-
-        self.done = False
-
-    def step(self):
-        if not self.env1.done:
-            self.env1.step()
-        if not self.env2.done:
-            self.env2.step()
-        self.done = self.env1.done and self.env2.done
-
-    def render(self):
-        self.env1.render()
-        self.env2.render()
-
-    def close(self):
-        self.env1.close()
-        self.env2.close()
-
-
 # Parse arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("-v", "--version", help="Define version of env to use.")
@@ -275,7 +203,6 @@ parser.add_argument("-f", "--folder", help="Specify folder to use.")
 parser.add_argument("-r", "--record_video", help="Specify recording folder.")
 parser.add_argument("-n", "--n_episodes", help="Specify number of episodes.",
                     default="50")
-parser.add_argument("-f2", "--folder_2", help="Specify a second agent.")
 parser.add_argument("-cfr", "--copy_from_remote", help="Specify if files should be downloaded from mapcompute first.")
 parser.add_argument("-det", "--deterministic", help="Set deterministic or probabilistic actions.", default="False")
 parser.add_argument("-fcam", "--free_cam", help="Set camera free.", default="False")
@@ -291,7 +218,6 @@ folder = args.folder
 ep = None
 if folder is not None and len(folder.split(":")) > 1:
     folder, ep = folder.split(":")
-folder_2 = args.folder_2
 record_video = args.record_video
 n_episodes = int(args.n_episodes)
 free_cam = True if args.free_cam in ["True", "true", "1"] else False
@@ -309,12 +235,8 @@ if args.copy_from_remote in ['1', 'True', 'true']:
 if args.copy_from_remote in ['2']:
     os.system("rsync -rav -e ssh wgserver:~/aslaug3d_simulation/data/saved_models/{} data/saved_models".format(folder))
 
-if folder_2:
-    er = EnvComparer(version, folder, folder_2, ep,
-                     record_video, deterministic)
-else:
-    er = EnvRunner(version, ep, folder, record_video, deterministic, free_cam,
-                   no_sleep, not no_gui)
+er = EnvRunner(version, ep, folder, record_video, deterministic, free_cam,
+               no_sleep, not no_gui)
 
 # Prepare curriculum learning
 if param is not None:

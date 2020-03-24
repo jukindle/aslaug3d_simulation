@@ -4,7 +4,7 @@ import numpy as np
 import pybullet as pb
 import pybullet_data
 import os
-import json
+import yaml
 
 
 class AslaugBaseEnv(gym.Env):
@@ -21,8 +21,8 @@ class AslaugBaseEnv(gym.Env):
 
         if params is None:
             print("No env params specified, using default.")
-            with open("params.json") as f:
-                params_all = json.load(f)
+            with open("params.yaml") as f:
+                params_all = yaml.load(f)
             params = params_all["environment_params"]
         params = self.numpyfy_dict(params)
         self.p = params
@@ -616,12 +616,12 @@ class AslaugBaseEnv(gym.Env):
 
     def save_world(self, dir, pre_f, inf_f, ep):
         wn = "{}.video.{}.video{:06}.world.world".format(pre_f, inf_f, ep)
-        sn = "{}.video.{}.video{:06}.setpoints.json".format(pre_f, inf_f, ep)
+        sn = "{}.video.{}.video{:06}.setpoints.yaml".format(pre_f, inf_f, ep)
         world_path = os.path.join(dir, wn)
         sp_path = os.path.join(dir, sn)
         pb.saveWorld(world_path, self.clientId)
         with open(sp_path, 'w') as f:
-            json.dump(self.sp_history, f)
+            yaml.dump(self.sp_history, f)
 
     def numpyfy_dict(self, input):
         if isinstance(input, list):

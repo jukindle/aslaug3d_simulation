@@ -2,3 +2,4 @@ data/
 *.pyc
 latest.json
 *.m~
+*__pycache__

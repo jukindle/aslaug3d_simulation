@@ -1,45 +1,30 @@
-# aslaug3d_simulation
+# Aslaug3D Simulation instructions
+
+## Installation
+Note that this repository uses python3.
+### Dependencies
+Install the packages [gym](https://github.com/openai/gym), [stable_baselines](https://github.com/hill-a/stable-baselines), [numpy](https://github.com/numpy/numpy), [scipy](https://github.com/scipy/scipy), [pybullet](https://github.com/bulletphysics/bullet3), [pyyaml](https://pypi.org/project/PyYAML/) and [opencv](https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_tutorials.html). Note that the minimalistic installation with pip might be sufficient, but is not guaranteed.
 
 ## Usage
 
-`python3 train.py -s 90e6 -v some_version -p policies.aslaug_policy_v4.AslaugPolicy -f some_name -n 64`
-`python3 run.py -v v12easy -cfr 0 --det 0 -f final_pt:10M --no_sleep 0 --free_cam 1`
+### Training
+To train an agent for 90M steps with 16 worker in parallel stored to the folder `test_training`, use
 
-# Evaluation in simu or on real machine
+    python3 train.py -s 90e6 -v v0 -p policies.aslaug_policy_v0.AslaugPolicy -f test_training -n 16
 
-## Simulation evaluation
+### Running
+To run a trained agent from folder `test_training` at episode 60.5M, use
 
-1. Copy the saved folder for an agent to the Raspberry Pi (rospi, use SD card wit image in Tupper ware)
-2. "ros_aslaug" sources the environment. Don't forget to set rosmaster (in our case, to WGServer)
+    python3 run.py -v v0 -f test_training:60.5M
 
-### Evaluation of the baseline
+### Playing with parameters
+Every time a training session is started, the Hyperparameters for the training and the environment are loaded from the file `params.yaml`. Therefore, it is recommended to parametrize new features added to the environments to allow for maximum flexibility and fast adjustment of parameters.
 
-On Server:
-`roslaunch aslaug_moveit_baseline full_baseline.launch moveit:=false world_name:=...`
-Don't forget to unpause gazebo in GUI
+### Convertion of an arbituary robot xacro file to pybullet URDF
+In order to eliminate the need of a functioning ROS installation, we created a script which converts a xacro file to URDF without ROS package references but relative paths. Note that for the conversion, ROS must be installed and the workspace in which the robot description is located must be sourced. Also, note that ROS uses python2, so this file should be executed with python2 as well.
 
-On Raspberry Pi in multiple terminals:
-`roslaunch aslaug_moveit_baseline moveit.launch`
+In order to convert a xacro file to a reference-less URDF with all dependencies copied to a subfolder in the `urdf` folder, use
 
-`roscd aslaug_moveit_baseline; cd scripts; python perform_tests_easy.py ...`
+    python xacro_to_pybullet_urdf.py '/path/to/xacro/file'
 
-### Evaluation of the agent
-
-On Server:
-`roslaunch aslaug_bringup aslaug_control_simu.launch rviz:=false world_name:=...`
-Don't forget to unpause gazebo in GUI
-
-On Raspberry Pi (two terminals):
-`roslaunch aslaug_bringup aslaug_control_only.launch`
-
-`roscd aslaug_brinup; cd scripts; python perform_tests.py ...`
-
-The evaluation can be done by executing eval.py in the respective folder.
-
-## Real machine execution
-
-1. Startup machine and ssh to panda (for port forwarding bridge)
-2. Go to https://localhost:10000/desk/ and execute script which moves panda to tests initial position
-3. SSH to ridgeback and execute localization from rovioli (something like moma_demos localization.launch)
-4. Execute panda velocity controller on panda (panda_control velocity.launch or so?)
-5. Adapt the control launch file and the controller node to use simulation=False and launch it: roslaunch aslaug_bringup aslaug_control.launch
+This will create a new folder in `urdf` with the same name as the xacro file, filled with a urdf file which describes the robot and a subfolder `meshes` with all required files (.stl, .dae etc.).

@@ -1,0 +1,247 @@
+# Hyperparameters of PPO2
+learning_params:
+  cliprange: 0.2
+  cliprange_vf: -1
+  ent_coef: 0.003760312514286235
+  gamma: 0.999
+  lam: 0.8
+
+  # Linear learning rate [LR_start, LR_end, T_start, T_end] where
+  # T goes from 1 to 0 during training.
+  learning_rate: [0.00025, 0.0002, 0.995, 0.2]
+
+  n_steps: 2048
+  nminibatches: 8
+  noptepochs: 30
+
+# Parameters which define the environment
+environment_params:
+  # Base platform parameters
+  base:
+    acc_mag: [0.15, 0.15, 0.3]  # Maximum accelerations [x, y, theta]
+    vel_mag_lin: 0.1  # Maximum linear velocity (x^2+y^2 <= vel_mag_lin^2)
+    vel_mag_ang: 0.2  # Maximum angular acceleration for theta
+
+    # Base acceleration noise (gaussian)
+    std_acc_lin: 0.001
+    std_acc_ang: 0.001
+
+  # Manipulator parameters
+  joints:
+    vel_mag: 0.5  # Maximum velocity for each joint
+    acc_mag: 0.8  # Maximum acceleration for each joint
+    base_link_name: panda_link0  # Name of the base link
+    ee_link_name: panda_ee  # Link name of the end effector
+
+    # Initial joint configuration, used for 2D lock (actuated joints will not
+    # keep this value but obtain a randomly chosen angle)
+    init_states: [3.141592, 1.5708, 1.5708, 0, -1.5708, 3.14159, 0.7854]
+
+    # Names of the joints which shall be actuated
+    joint_names: [panda_joint1, panda_joint4]
+
+    # Link names and respective normalization which shall be added to the
+    # observation (their 6D pose relative to base_link_name)
+    link_names: []
+    link_mag: []
+
+    std_acc: 0.0001  # Acceleration noise (gaussian)
+
+    # Position noise (uniform) for each joint during initialization. Only
+    # important for fixed actuators.
+    static_act_noise_mag: [0, 0, 0, 0, 0, 0, 0]
+
+  # Reward function parameters. "Total reward" means that the reward will be
+  # summed up to this value in case that the agent reaches its setpoint.
+  reward:
+    # Total reward for the angle between the two vectors EE and EE-to-SP
+    fac_goal_dis_ang: 0
+
+    # Reward for reducing Base-to-SP angle. Useful for differential drive.
+    fac_base_sp_ang: 0
+
+    # Harmonic potential field rewards
+    rew_path_dis_p_m: 10  # Reward per meter for reducing EE-to-HPT_path dis.
+    rew_path_total: 50  # Total reward for progress along HPT_path
+
+    # Total reward for reducing Euclidean EE-to-SP distance
+    fac_goal_dis_lin: 0
+
+    # Total reward aquired for remaining in tolerance sphere "tol_lin_mag" for
+    # "hold_time" seconds
+    fac_sp_hold: 20
+
+    # Additional total reward for keeping a smaller EE-to-SP distance than
+    # just the required "tol_lin_mag"
+    fac_sp_hold_near: 40
+
+    # Reward for collisions
+    rew_collision: -60
+
+    # Final reward for reaching the setpoint
+    rew_goal_reached: 10
+
+    # Reward for reaching the joint limits of the manipulator
+    rew_joint_limits: -20
+
+    # Total reward for time during "timeout"
+    rew_timeout: -15
+
+    # Lidar reward parameters
+    dis_lidar: 0.3  # Maximum distance at which reward will be given
+    # Reward given per meter when smallest lidar value is less than "dis_lidar"
+    rew_lidar_p_m: -1
+
+  # Parameters for the different sensors of the robot
+  sensors:
+
+    # Lidar parameters
+    lidar:
+      ang_mag: 2.0944  # Maximum angle of the lidars (per side)
+
+      # Link names from which scans will be calculated
+      link_id1: front_laser
+      link_id2: rear_laser
+
+      n_scans: 201  # Meassurements per lidar
+      range: 5  # Maximum range of the sensors
+
+      # Noise parameters for the lidar measurements (gaussian)
+      noise:
+        mean: 0
+        std: 0.015
+        p_err: 0.025  # Probability that a scan takes maximum value ("range")
+
+    # EE-to-SP measurement parameters
+    setpoint_meas:
+      # Noise for EE-to-SP measurement (gaussian)
+      std_lin: 0.00025
+      std_ang: 0.00025
+
+    # Odometry parameters
+    odometry:
+      # Noise for odometry (gaussian)
+      std_lin: 0.001
+      std_ang: 0.001
+
+  # Setpoint parameters
+  setpoint:
+    # Specify if reaching a SP will sometimes keep the current env and robot
+    # configuration to "proceed the current mission" instead of respawning
+    # the robot at a new location.
+    continious_mode: true
+
+    # Minimum time required to be in the tolerance sphere for completion
+    hold_time: 1.5
+
+    # Tolerances for the EE-to-SP vector for completion
+    tol_ang_mag: 3.141592
+    tol_lin_mag: 0.0425
+
+    # Specify whether to use full3D or a 2D locked configuration. This will
+    # affect if the z-coordinate is considered as well for calculating the
+    # current EE-to-SP distance.
+    2D_locked: true
+
+    # Specify in which shelf layers the setpoint can spawn. The lowest layer is
+    # layer 0, and the upper most layer is 3
+    layers: [3]
+
+    # Specify the maximum deviation from the center of each shelf element.
+    # These are uniform distributions
+    noise:
+      range_x: [0.5325, 0.5325]
+      range_y: [0.1, 0.19]
+      range_z: [0, 0]
+
+  # Parameters for the world
+  world:
+    # Uniform distributions
+    corridor_length: [14, 17]  # Corridor length
+    corridor_width: [2.35, 3.2]  # Corridor width
+    wall_length: [0.3, 7.5]  # Length of the walls which separate doors
+    wall_width: [0.05, 0.3]  # Width of all walls
+    wall_height: [1.5, 1.51]  # Height of all walls
+    door_length: [0.75, 2.5]  # Length of the doors
+    shelf_length: [0.3, 1.75]  # Length of the spawned obstacle shelves
+    shelf_height: [1.25, 1.5]  # Height of the spawned obstacle shelves
+    shelf_width: [0.05, 1.5]  # # Width of the spawned obstacle shelves
+    shelf_gap:  [-0.5, 5.5]  # Gap between two shelves
+
+    # Minimum clearance in the corridor for the robot (shelf sizes will be
+    # adapted to ensure this requirement)
+    min_clearance: 1.25
+
+    # Probability to spawn a completely new environment after episode end
+    prob_new_env: 0.25
+
+    # Probability to keep the robot position and environment and only spawn
+    # a new setpoint
+    prob_proceed: 0.25
+
+    # Define whether the robot has an action which "breaks" the systems
+    # velocities to zero or not
+    use_stop_action: false
+
+    # Harmonic Potential Field parameters
+    HPF:
+      # Resolution (samples per meter) specifying the discretazion of the
+      # environment for creating a HPT
+      res: 8
+
+    # Maximum distance (in corridor length direction) from the setpoint
+    # the robot's base platform might be spawned
+    spawn_range_x: 8
+
+    # Discretiazion resolution of the action space. When 0, the actions are
+    # continous (gym.spaces.Box), when > 0 the actions are discrezited
+    # (gym.spaces.MultiDiscrete)
+    action_discretization: 5
+
+    # The normalization used for the setpoint measurements.
+    size: 20
+
+    # Simulation time resolution
+    tau: 0.04
+
+    # Timeout after which the episode ends
+    timeout: 120
+
+    # Parameters for dynamic obstacles spawned (humans)
+    n_humans: 2  # Number of humans which might walk around
+    p_spawn_human: 0  # Probability for each human to be spawned
+
+  # Automatic Domain Randomization parameters
+  adr:
+    # Thresholds for the success rate above and below which one of the
+    # parameters is adapted
+    success_threshold: 0.63
+    fail_threshold: 0.1
+
+    # Specifies how many episodes (per worker) are used for success rate
+    # calculation. More means smoother success rate but introduces delay.
+    batch_size: 5
+
+    # Adaptions which are made to the environment in case that the success
+    # rate is high enough ("success_threshold") or drops critically
+    # low ("fail_threshold"). Adaptions can change environment parameters
+    # over time, depending on the success rate. An example for adaptions:
+    # adaptions: [
+    # [
+    #   {"param": "world.wall_width.1", "start": 0.01, "end": 0.3, "steps": 10},
+    #   {"param": "world.p_spawn_human", "start": 0, "end": 1, "steps": 10}
+    # ],
+    # [
+    #   {"param": "world.spawn_range_x", "start": 2.0, "end": 10.0, "steps": 10}
+    # ]
+    # ]
+    # First, all params are initialized to their start value. Then, as soon as
+    # The success rate is higher than the threshold, one of the parameters
+    # p_spawn_human or wall_width[1] are adapted towards their end value in
+    # a total of 10 steps. As soon as both parameters reached their end value,
+    # the same procedure repeats for spawn_range_x.
+    # Note that if adaptions are used, they must always be capsuled in two
+    # lists, even if only a single adaption is used. The inner lists specify
+    # which adaptions shall be completed before proceeding with the next
+    # element in the outer list.
+    adaptions: []
