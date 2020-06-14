@@ -28,3 +28,16 @@ In order to convert a xacro file to a reference-less URDF with all dependencies 
     python xacro_to_pybullet_urdf.py '/path/to/xacro/file'
 
 This will create a new folder in `urdf` with the same name as the xacro file, filled with a urdf file which describes the robot and a subfolder `meshes` with all required files (.stl, .dae etc.).
+
+## Citing
+
+Please cite the [following paper](https://arxiv.org/abs/2003.02637) when using this repository for your paper:
+
+```bibtex
+@article{kindle2020rlwbc,
+  title={Whole-Body Control of a Mobile Manipulator using End-to-End Reinforcement Learning},
+  author={Kindle, Julien and Furrer, Fadri and Novkovic, Tonci and Chung, Jen Jen and Siegwart, Roland and Nieto, Juan},
+  journal={arXiv preprint arXiv:2003.02637},
+  year={2020}
+}
+```
