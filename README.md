@@ -1,7 +1,10 @@
 # Aslaug3D Simulation instructions
 
 ## Installation
-Note that this repository uses python3.
+Note that this repository uses python3. After cloning this repository, cd into it and execute
+
+    mkdir -p data/saved_models
+
 ### Dependencies
 Install the packages [gym](https://github.com/openai/gym) (0.14.0), [stable_baselines](https://github.com/hill-a/stable-baselines) (2.7.0), [numpy](https://github.com/numpy/numpy) (1.16.2), [scipy](https://github.com/scipy/scipy) (1.3.1), [pybullet](https://github.com/bulletphysics/bullet3) (2.5.6), [pyyaml](https://pypi.org/project/PyYAML/) (5.1.2) and [opencv](https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_tutorials.html) (4.1.1). Note that the minimalistic installation with pip might be sufficient (opencv-python==4.1.1.26), but is not guaranteed.
 
